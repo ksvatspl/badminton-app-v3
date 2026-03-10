@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Badminton Hub Pro (V3.2 - Fixed Stats)</title>
+    <title>Badminton Hub Pro (V3.3 - Refined Stats)</title>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -66,24 +66,25 @@
 
         /* Modals */
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); align-items: center; justify-content: center; }
-        .modal-content { background: var(--bg-card); border-radius: 15px; width: 90%; max-width: 400px; max-height: 80vh; overflow: hidden; display: flex; flex-direction: column; }
+        .modal-content { background: var(--bg-card); border-radius: 15px; width: 90%; max-width: 450px; max-height: 85vh; overflow: hidden; display: flex; flex-direction: column; }
         .modal-header { padding: 15px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
-        .modal-body { padding: 10px 20px; overflow-y: auto; flex: 1; }
+        .modal-body { padding: 5px 15px; overflow-y: auto; flex: 1; }
         .btn-close-modal { font-size: 32px; color: var(--text-dim); cursor: pointer; }
-        .modal-row { display: grid; grid-template-columns: 1fr 60px 80px; gap: 10px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border); font-size: 0.95rem; }
 
         .bottom-nav { position: fixed; bottom: 0; width: 100%; background: #202225; display: flex; border-top: 1px solid var(--border); padding: 10px 0; z-index: 200; }
         .nav-item { flex: 1; text-align: center; color: var(--text-dim); cursor: pointer; font-size: 0.8rem; }
         .nav-item.active { color: var(--accent); font-weight: bold; }
         
-        .m-table th { color: var(--text-dim); font-size: 0.65rem; text-transform: uppercase; padding: 5px; border-bottom: 1px solid var(--border); }
-        .m-table td { padding: 10px 2px; border-bottom: 1px solid #36393f; }
+        /* Table Styles */
+        .m-table { width: 100%; border-collapse: collapse; }
+        .m-table th { color: var(--text-dim); font-size: 0.65rem; text-transform: uppercase; padding: 8px 4px; border-bottom: 1px solid var(--border); }
+        .m-table td { padding: 10px 4px; border-bottom: 1px solid #36393f; font-size: 0.9rem; }
     </style>
 </head>
 <body>
 
 <div id="deleteModal" class="modal">
-    <div class="modal-content" style="max-height: 300px;">
+    <div class="modal-content" style="max-height: 300px; width: 85%;">
         <div class="modal-body" style="text-align: center; padding-top: 30px;">
             <h3 style="margin:0 0 10px 0; color:var(--danger);">⚠️ ยืนยันการลบ</h3>
             <p style="color: var(--text-dim); font-size: 0.85rem;">พิมพ์ <strong style="color:white;">delete</strong> เพื่อล้างข้อมูล</p>
@@ -100,7 +101,19 @@
             <h3 style="margin:0; color:var(--accent);">📊 สถิติเกมที่เล่น</h3>
             <span class="btn-close-modal" onclick="closeStats()">&times;</span>
         </div>
-        <div class="modal-body" id="miniStatsList"></div>
+        <div class="modal-body">
+            <table class="m-table">
+                <thead>
+                    <tr>
+                        <th style="text-align:left; padding-left:10px;">ชื่อ</th>
+                        <th style="width:15%;">คลาส</th>
+                        <th style="width:15%;">เกม</th>
+                        <th style="width:20%;">Win%</th>
+                    </tr>
+                </thead>
+                <tbody id="miniStatsTableBody"></tbody>
+            </table>
+        </div>
         <div style="padding: 12px; background: #2f3136; border-top: 1px solid var(--border);">
             <button class="btn-main" style="padding: 10px;" onclick="closeStats()">ปิดหน้าต่าง</button>
         </div>
@@ -119,7 +132,7 @@
             <button class="btn-main" onclick="registerMember()">+ เพิ่มสมาชิก</button>
         </div>
         <div class="card" style="padding: 10px 5px;">
-            <table class="m-table" style="width:100%; border-collapse:collapse;">
+            <table class="m-table">
                 <thead>
                     <tr>
                         <th style="text-align:left; padding-left:15px;">ชื่อ</th>
@@ -363,7 +376,7 @@
         btn.classList.add('selected'); btn.parentElement.dataset.winner = team;
     }
 
-    // ระบบสถิติย่อ
+    // ระบบสถิติย่อ (Refined Table Layout)
     window.openStats = function() {
         document.getElementById('statsModal').style.display = "flex";
         const stats = window.allDataMemory.filter(i => i.TotalPlayed !== undefined);
@@ -372,14 +385,15 @@
         sorted.forEach(m => { 
             if(m.Name) {
                 const wr = m.TotalPlayed > 0 ? Math.round((m.Win / m.TotalPlayed) * 100) : 0;
-                html += `<div class="modal-row">
-                    <div><b>${m.Name}</b></div>
-                    <div class="${window.getTxtClass(m.Class)}" style="text-align:center;">${m.Class}</div>
-                    <div style="text-align:right;"><b>${m.TotalPlayed}</b> เกม <small style="color:var(--text-dim);">(${wr}%)</small></div>
-                </div>`;
+                html += `<tr>
+                    <td style="padding-left:10px;"><b>${m.Name}</b></td>
+                    <td class="${window.getTxtClass(m.Class)}" style="text-align:center;">${m.Class}</td>
+                    <td style="text-align:center; font-weight:bold;">${m.TotalPlayed || '-'}</td>
+                    <td style="text-align:center; color:var(--text-dim); font-size:0.85rem;">${m.TotalPlayed > 0 ? wr+'%' : '-'}</td>
+                </tr>`;
             }
         });
-        document.getElementById('miniStatsList').innerHTML = html || "<div style='padding:20px; text-align:center;'>ไม่มีข้อมูล</div>";
+        document.getElementById('miniStatsTableBody').innerHTML = html || "<tr><td colspan='4' style='padding:20px; text-align:center;'>ไม่มีข้อมูล</td></tr>";
     }
     window.closeStats = function() { document.getElementById('statsModal').style.display = "none"; }
 
