@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Badminton Hub Pro (V3.1)</title>
+    <title>Badminton Hub Pro (V3.2 - Fixed Stats)</title>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -13,8 +13,8 @@
         }
         body { background-color: var(--bg-body); color: var(--text-main); font-family: 'Kanit', sans-serif; margin: 0; padding-bottom: 90px; }
         
-        .page-header { position: sticky; top: 0; background-color: var(--bg-body); z-index: 100; padding: 15px; border-bottom: 1px solid var(--border); height: 60px; box-sizing: border-box; display: flex; align-items: center; }
-        .page-header h2 { border-left: 4px solid var(--accent); padding-left: 10px; margin: 0; font-size: 1.1rem; width: 100%; }
+        .page-header { position: sticky; top: 0; background-color: var(--bg-body); z-index: 100; padding: 15px; border-bottom: 1px solid var(--border); height: 60px; box-sizing: border-box; display: flex; align-items: center; justify-content: space-between; }
+        .page-header h2 { border-left: 4px solid var(--accent); padding-left: 10px; margin: 0; font-size: 1.1rem; display: flex; align-items: center; gap: 10px; }
 
         .container { padding: 10px; max-width: 600px; margin: auto; }
         .page { display: none; animation: fadeIn 0.15s; }
@@ -49,6 +49,8 @@
         .btn-saved-compact { background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--text-dim); padding: 8px; font-size: 0.75rem; border-radius: 8px; width: 100%; text-align: center; margin-top: 5px; }
         .btn-edit-link { background: transparent; border: none; color: var(--warning); font-size: 0.75rem; text-decoration: underline; cursor: pointer; width: 100%; margin-top: 8px; display: none; }
 
+        .btn-mini { background: #5865f2; color: white; border: none; border-radius: 6px; padding: 6px 12px; font-size: 0.8rem; cursor: pointer; }
+
         .btn-danger { background: var(--danger); width: 100%; padding: 14px; color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; margin-bottom: 15px; }
         
         .btn-status { border: none; border-radius: 6px; padding: 6px 4px; font-size: 0.7rem; font-weight: bold; cursor: pointer; width: 100%; }
@@ -62,8 +64,13 @@
         .dot-active { background: var(--accent); box-shadow: 0 0 5px var(--accent); }
         .dot-off { background: var(--danger); }
 
+        /* Modals */
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); align-items: center; justify-content: center; }
-        .modal-content { background: var(--bg-card); border-radius: 15px; width: 85%; max-width: 350px; padding: 20px; }
+        .modal-content { background: var(--bg-card); border-radius: 15px; width: 90%; max-width: 400px; max-height: 80vh; overflow: hidden; display: flex; flex-direction: column; }
+        .modal-header { padding: 15px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .modal-body { padding: 10px 20px; overflow-y: auto; flex: 1; }
+        .btn-close-modal { font-size: 32px; color: var(--text-dim); cursor: pointer; }
+        .modal-row { display: grid; grid-template-columns: 1fr 60px 80px; gap: 10px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border); font-size: 0.95rem; }
 
         .bottom-nav { position: fixed; bottom: 0; width: 100%; background: #202225; display: flex; border-top: 1px solid var(--border); padding: 10px 0; z-index: 200; }
         .nav-item { flex: 1; text-align: center; color: var(--text-dim); cursor: pointer; font-size: 0.8rem; }
@@ -76,12 +83,27 @@
 <body>
 
 <div id="deleteModal" class="modal">
+    <div class="modal-content" style="max-height: 300px;">
+        <div class="modal-body" style="text-align: center; padding-top: 30px;">
+            <h3 style="margin:0 0 10px 0; color:var(--danger);">⚠️ ยืนยันการลบ</h3>
+            <p style="color: var(--text-dim); font-size: 0.85rem;">พิมพ์ <strong style="color:white;">delete</strong> เพื่อล้างข้อมูล</p>
+            <input type="text" id="deleteConfirmInput" placeholder="พิมพ์ตรงนี้" onkeyup="checkDeleteInput()" style="text-align: center;">
+            <button class="btn-danger" id="btnConfirmDelete" onclick="executeDelete()" disabled>ยืนยันลบทั้งหมด</button>
+            <button class="btn-main" style="background:#4f545c; padding: 10px; margin-top:5px;" onclick="closeDeleteModal()">ยกเลิก</button>
+        </div>
+    </div>
+</div>
+
+<div id="statsModal" class="modal">
     <div class="modal-content">
-        <h3 style="margin:0 0 10px 0; color:var(--danger); text-align:center;">⚠️ ยืนยันการลบ</h3>
-        <p style="color: var(--text-dim); font-size: 0.85rem; text-align: center;">พิมพ์ <strong style="color:white;">delete</strong> เพื่อล้างข้อมูล</p>
-        <input type="text" id="deleteConfirmInput" placeholder="พิมพ์ตรงนี้" onkeyup="checkDeleteInput()" style="text-align: center;">
-        <button class="btn-danger" id="btnConfirmDelete" onclick="executeDelete()" disabled>ยืนยันลบทั้งหมด</button>
-        <button class="btn-main" style="background:#4f545c; padding: 10px; margin-top:5px;" onclick="closeDeleteModal()">ยกเลิก</button>
+        <div class="modal-header">
+            <h3 style="margin:0; color:var(--accent);">📊 สถิติเกมที่เล่น</h3>
+            <span class="btn-close-modal" onclick="closeStats()">&times;</span>
+        </div>
+        <div class="modal-body" id="miniStatsList"></div>
+        <div style="padding: 12px; background: #2f3136; border-top: 1px solid var(--border);">
+            <button class="btn-main" style="padding: 10px;" onclick="closeStats()">ปิดหน้าต่าง</button>
+        </div>
     </div>
 </div>
 
@@ -114,7 +136,10 @@
 </div>
 
 <div id="page2" class="page">
-    <div class="page-header"><h2>🏸 จดผลการแข่งขัน</h2></div>
+    <div class="page-header">
+        <h2>🏸 จดผล</h2>
+        <button class="btn-mini" onclick="openStats()">📊 สถิติย่อ</button>
+    </div>
     <div class="container">
         <div id="matchContainer"></div>
         <button id="btnAddNext" class="btn-main" style="background:transparent; border:2px dashed var(--border); color:var(--text-dim);" onclick="addNewMatchBox(true)">+ เพิ่มเกมใหม่</button>
@@ -122,7 +147,7 @@
 </div>
 
 <div id="page3" class="page">
-    <div class="page-header"><h2>⚙️ ตั้งค่า & สรุปผล</h2></div>
+    <div class="page-header"><h2>⚙️ ตั้งค่า & สรุป</h2></div>
     <div class="container">
         <div class="dash-grid" id="dashBoard">
             <div class="dash-item"><span class="dash-val" id="stat-matches">0</span><span class="dash-label">แมตช์</span></div>
@@ -196,11 +221,7 @@
     window.registerMember = async function() {
         const n = document.getElementById('mem_name'); const c = document.getElementById('mem_class'); const nt = document.getElementById('mem_note');
         if(!n.value.trim()) return;
-        
-        // Validation: กันชื่อซ้ำ
-        const isDuplicate = fireMembers.some(m => m.name.toLowerCase() === n.value.trim().toLowerCase());
-        if(isDuplicate) return alert(`ชื่อ "${n.value}" มีอยู่ในระบบแล้วครับ!`);
-
+        if(fireMembers.some(m => m.name.toLowerCase() === n.value.trim().toLowerCase())) return alert(`ชื่อนี้มีแล้วครับ!`);
         await addDoc(collection(db, "members"), { name: n.value.trim(), class: c.value, note: nt.value, status: "Active" });
         n.value = ""; nt.value = "";
     };
@@ -214,13 +235,8 @@
         const box = document.getElementById(`match-box-${id}`);
         const winner = box.querySelector('.btn-group').dataset.winner;
         const players = Array.from(box.querySelectorAll('.p-select')).map(s => s.value).filter(v => v !== "");
-        
-        if (players.length < 4 || !winner) return alert("กรุณาเลือกนักกีฬาให้ครบ 4 คน และเลือกทีมที่ชนะครับ");
-        
-        // Validation: กันคนซ้ำในแมตช์
-        const hasDuplicate = new Set(players).size !== players.length;
-        if(hasDuplicate) return alert("ไม่สามารถเลือกนักกีฬาคนเดิมซ้ำในแมตช์เดียวกันได้ครับ!");
-
+        if (players.length < 4 || !winner) return alert("กรุณากรอกข้อมูลให้ครบครับ");
+        if(new Set(players).size !== players.length) return alert("เลือกชื่อคนเดิมซ้ำไม่ได้ครับ!");
         const data = { p1a: players[0], p2a: players[1], p1b: players[2], p2b: players[3], winner };
         if(box.dataset.docid) await updateDoc(doc(db, "matches", box.dataset.docid), data);
         else await addDoc(collection(db, "matches"), { ...data, timestamp: serverTimestamp() });
@@ -346,6 +362,26 @@
         btn.parentElement.querySelectorAll('.btn-choice').forEach(b => b.classList.remove('selected'));
         btn.classList.add('selected'); btn.parentElement.dataset.winner = team;
     }
+
+    // ระบบสถิติย่อ
+    window.openStats = function() {
+        document.getElementById('statsModal').style.display = "flex";
+        const stats = window.allDataMemory.filter(i => i.TotalPlayed !== undefined);
+        let sorted = stats.sort((a, b) => b.TotalPlayed - a.TotalPlayed);
+        let html = "";
+        sorted.forEach(m => { 
+            if(m.Name) {
+                const wr = m.TotalPlayed > 0 ? Math.round((m.Win / m.TotalPlayed) * 100) : 0;
+                html += `<div class="modal-row">
+                    <div><b>${m.Name}</b></div>
+                    <div class="${window.getTxtClass(m.Class)}" style="text-align:center;">${m.Class}</div>
+                    <div style="text-align:right;"><b>${m.TotalPlayed}</b> เกม <small style="color:var(--text-dim);">(${wr}%)</small></div>
+                </div>`;
+            }
+        });
+        document.getElementById('miniStatsList').innerHTML = html || "<div style='padding:20px; text-align:center;'>ไม่มีข้อมูล</div>";
+    }
+    window.closeStats = function() { document.getElementById('statsModal').style.display = "none"; }
 
     window.openDeleteModal = function(target) {
         window.deleteTarget = target;
