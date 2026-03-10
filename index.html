@@ -179,4 +179,306 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import
+    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, updateDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    // --- ใส่ Config Firebase ของคุณ ---
+    const firebaseConfig = {
+        apiKey: "AIzaSyAM_cIiH6GR3N47H3Ydtma7fhSI_Hvk3Gk",
+        authDomain: "badminton-hub-99b35.firebaseapp.com",
+        projectId: "badminton-hub-99b35",
+        storageBucket: "badminton-hub-99b35.firebasestorage.app",
+        messagingSenderId: "488493837313",
+        appId: "1:488493837313:web:054096949a9ed4db7f6400"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // ตัวแปรเก็บข้อมูลให้หน้าตาเหมือนเดิม
+    window.allDataMemory = [];
+    window.gameCount = 0;
+    window.isHistoryLoaded = false;
+    
+    // ข้อมูลดิบจาก Firebase
+    let fireMembers = [];
+    let fireMatches = [];
+
+    // --- ดึงข้อมูล Real-time ---
+    const membersQuery = query(collection(db, "members"));
+    const matchesQuery = query(collection(db, "matches"), orderBy("timestamp", "asc"));
+
+    onSnapshot(membersQuery, (snapshot) => {
+        fireMembers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        processData();
+    });
+
+    onSnapshot(matchesQuery, (snapshot) => {
+        fireMatches = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        processData();
+    });
+
+    // --- แปลงร่างข้อมูล Firebase ให้เข้ากับ UI เดิมเป๊ะๆ ---
+    function processData() {
+        let statsMap = {};
+        
+        // 1. ตั้งต้นค่าสถิติทุกคน
+        fireMembers.forEach(m => {
+            statsMap[m.name] = {
+                id: m.id, Name: m.name, Class: m.class, Status: m.status, Note: m.note,
+                TotalPlayed: 0, Win: 0, Loss: 0, WinRate: 0
+            };
+        });
+
+        // 2. คำนวณแพ้ชนะจากประวัติเกม
+        fireMatches.forEach(m => {
+            const updateStat = (p, isWin) => {
+                if(p && statsMap[p]) {
+                    statsMap[p].TotalPlayed++;
+                    if(isWin) statsMap[p].Win++; else statsMap[p].Loss++;
+                }
+            };
+            if(m.winner === 'Team A') {
+                updateStat(m.p1a, true); updateStat(m.p2a, true);
+                updateStat(m.p1b, false); updateStat(m.p2b, false);
+            } else if (m.winner === 'Team B') {
+                updateStat(m.p1a, false); updateStat(m.p2a, false);
+                updateStat(m.p1b, true); updateStat(m.p2b, true);
+            }
+        });
+
+        // 3. คำนวณเปอร์เซ็นต์
+        Object.values(statsMap).forEach(s => {
+            s.WinRate = s.TotalPlayed > 0 ? (s.Win / s.TotalPlayed) : 0;
+        });
+
+        const statsArray = Object.values(statsMap);
+        
+        // 4. แปลงโครงสร้างการแข่งให้เข้ากับกล่องประวัติเดิม
+        const matchArray = fireMatches.map(m => ({
+            id: m.id, Type: "MatchHistory", P1A: m.p1a, P2A: m.p2a, P1B: m.p1b, P2B: m.p2b, Winner: m.winner
+        }));
+
+        // 5. รวมใส่ allDataMemory เหมือนของ Google Sheets เป๊ะ
+        window.allDataMemory = [...statsArray, ...matchArray];
+
+        // ซ่อนไอคอนโหลด
+        const loadingInd = document.getElementById('loading-indicator');
+        if(loadingInd) loadingInd.style.display = 'none';
+
+        window.renderAll();
+    }
+
+    // --- ฟังก์ชันบันทึก/อัปเดตข้อมูลด้วย Firebase ---
+    window.registerMember = async function() {
+        const nameInput = document.getElementById('mem_name');
+        const classInput = document.getElementById('mem_class');
+        const noteInput = document.getElementById('mem_note');
+        if(!nameInput.value) return alert("ใส่ชื่อ!");
+        
+        const btn = document.getElementById('btn-reg');
+        btn.disabled = true; btn.innerText = "⏳...";
+        
+        await addDoc(collection(db, "members"), { 
+            name: nameInput.value.trim(), class: classInput.value, note: noteInput.value, status: "Active" 
+        });
+
+        nameInput.value = ""; noteInput.value = ""; classInput.selectedIndex = 0; window.applyColor(classInput);
+        btn.disabled = false; btn.innerText = "+ เพิ่มชื่อสมาชิก";
+    };
+
+    window.quickStatusUpdate = async function(name, action) {
+        if(!confirm(`ยืนยันเปลี่ยนสถานะ: ${name}?`)) return;
+        const member = fireMembers.find(m => m.name === name);
+        if(member) {
+            const newStatus = action === "checkout" ? "Inactive" : "Active";
+            await updateDoc(doc(db, "members", member.id), { status: newStatus });
+        }
+    };
+
+    window.saveMatchBox = async function(id) {
+        const box = document.getElementById(`match-box-${id}`);
+        const winner = box.querySelector('.btn-group').dataset.winner;
+        const p1a = box.querySelector('[data-role="p1a"]').value;
+        if (!winner || !p1a) return alert("ข้อมูลไม่ครบ!");
+        
+        const btn = box.querySelector('.btn-main');
+        btn.disabled = true; btn.innerText = "⏳...";
+
+        const matchData = { 
+            p1a: p1a, 
+            p2a: box.querySelector('[data-role="p2a"]').value, 
+            p1b: box.querySelector('[data-role="p1b"]').value, 
+            p2b: box.querySelector('[data-role="p2b"]').value, 
+            winner: winner 
+        };
+
+        const docId = box.dataset.docid; // เช็คว่าเคยบันทึกแล้วหรือยัง
+        if(docId) {
+            await updateDoc(doc(db, "matches", docId), matchData);
+        } else {
+            const docRef = await addDoc(collection(db, "matches"), { ...matchData, timestamp: serverTimestamp() });
+            box.dataset.docid = docRef.id; // เก็บ ID ไว้เผื่อกดแก้ไขอีก
+        }
+
+        btn.innerText = "✓ สำเร็จ"; btn.classList.add('saved');
+        box.querySelector('.btn-edit').style.display = 'block';
+        box.querySelectorAll('select, .btn-choice').forEach(el => el.disabled = true);
+    };
+
+</script>
+
+<script>
+    window.renderAll = function() {
+        renderMemberList();
+        renderStatsTable();
+        updateDropdowns();
+        if (document.getElementById('page2').classList.contains('active') && !window.isHistoryLoaded) {
+            renderMatchHistory();
+        }
+    }
+
+    window.showPage = function(num) {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        document.getElementById('page' + num).classList.add('active');
+        document.querySelectorAll('.nav-item')[num-1].classList.add('active');
+        window.scrollTo(0, 0);
+        // Firebase syncs automatically, no need to call loadData
+    }
+
+    function updateDropdowns() {
+        const activeMembers = window.allDataMemory.filter(m => m.Status === "Active");
+        let options = '<option value="">- เลือก -</option>';
+        activeMembers.forEach(m => { options += `<option value="${m.Name}">${m.Name} [${m.Class}]</option>`; });
+        document.querySelectorAll('#matchContainer .p-select').forEach(s => { 
+            if(!s.disabled) { 
+                const cur = s.value; s.innerHTML = options; s.value = cur; 
+                if(cur) window.applyColor(s); 
+            } 
+        });
+    }
+
+    function renderStatsTable() {
+        const body = document.getElementById('fullStatsBody');
+        const stats = window.allDataMemory.filter(i => i.TotalPlayed !== undefined);
+        let sorted = stats.sort((a, b) => b.TotalPlayed - a.TotalPlayed);
+        let html = "";
+        sorted.forEach(m => {
+            if(!m.Name) return;
+            const isActive = m.Status === "Active";
+            html += `<tr>
+                <td><span class="status-dot ${isActive ? "dot-active" : "dot-off"}"></span>${m.Name}</td>
+                <td class="${window.getTxtClass(m.Class)}">${m.Class}</td>
+                <td style="font-weight:bold;">${m.TotalPlayed}</td>
+                <td><span style="color:var(--accent);">${m.Win}</span>/<span style="color:var(--danger);">${m.Loss}</span><br><span class="pct-badge">${(m.WinRate * 100 || 0).toFixed(0)}%</span></td>
+                <td><button class="btn-status ${isActive ? "btn-out" : "btn-in"}" onclick="quickStatusUpdate('${m.Name}', '${isActive ? "checkout" : "undo"}')">${isActive ? "🚪 ออก" : "🏸 เข้า"}</button></td>
+            </tr>`;
+        });
+        body.innerHTML = html || "<tr><td colspan='5'>ยังไม่มีข้อมูลสถิติ...</td></tr>";
+    }
+
+    function renderMatchHistory() {
+        const container = document.getElementById('matchContainer');
+        const historyData = window.allDataMemory.filter(item => item.Type === "MatchHistory");
+        if (historyData.length > 0 && !window.isHistoryLoaded) {
+            container.innerHTML = ""; window.gameCount = 0;
+            historyData.forEach((m) => {
+                window.gameCount++;
+                const box = createMatchElement(window.gameCount);
+                box.dataset.docid = m.id; // ผูก ID ของ Firebase ไว้กับกล่องนี้
+                container.appendChild(box);
+                
+                const b = document.getElementById(`match-box-${window.gameCount}`);
+                const selects = b.querySelectorAll('.p-select');
+                [m.P1A, m.P2A, m.P1B, m.P2B].forEach((name, i) => {
+                    if(name) {
+                        const opt = document.createElement('option'); opt.value = name; opt.text = name;
+                        selects[i].add(opt); selects[i].value = name;
+                    }
+                });
+                const btnGroup = b.querySelector('.btn-group');
+                btnGroup.dataset.winner = m.Winner;
+                const winBtn = Array.from(btnGroup.querySelectorAll('.btn-choice')).find(btn => (m.Winner === 'Team A' && btn.innerText.includes('A')) || (m.Winner === 'Team B' && btn.innerText.includes('B')));
+                if(winBtn) winBtn.classList.add('selected');
+                const btnSave = b.querySelector('.btn-main');
+                btnSave.innerText = "บันทึกแล้ว (ประวัติ)"; btnSave.classList.add('saved'); btnSave.disabled = true;
+                b.querySelector('.btn-edit').style.display = 'block';
+                b.querySelectorAll('select, .btn-choice').forEach(el => el.disabled = true);
+            });
+            window.isHistoryLoaded = true; addNewMatchBox();
+        } else if (window.gameCount === 0) { addNewMatchBox(); }
+    }
+
+    function createMatchElement(id) {
+        const div = document.createElement('div'); div.className = 'card'; div.id = `match-box-${id}`;
+        div.innerHTML = `<div class="game-label">เกมที่ ${id}</div><div class="match-grid"><div><select class="p-select" onchange="applyColor(this)" data-role="p1a"></select><select class="p-select" onchange="applyColor(this)" data-role="p2a"></select></div><div class="vs-text">VS</div><div><select class="p-select" onchange="applyColor(this)" data-role="p1b"></select><select class="p-select" onchange="applyColor(this)" data-role="p2b"></select></div></div><div class="btn-group"><button class="btn-choice" onclick="setBoxWin(this, 'Team A')">A ชนะ</button><button class="btn-choice" onclick="setBoxWin(this, 'Team B')">B ชนะ</button></div><button class="btn-main" onclick="saveMatchBox(${id})">บันทึกผล</button><button class="btn-edit" onclick="editMatchBox(${id})">✎ แก้ไข</button>`;
+        return div;
+    }
+
+    window.addNewMatchBox = function(shouldScroll = false) {
+        window.gameCount++;
+        const container = document.getElementById('matchContainer');
+        container.appendChild(createMatchElement(window.gameCount));
+        updateDropdowns();
+        if(shouldScroll) window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+    }
+
+    window.getTxtClass = function(cls) {
+        if(!cls) return "";
+        if(cls.includes('P')) return "txt-p"; if(cls.includes('S')) return "txt-s";
+        if(cls.includes('N')) return "txt-n"; if(cls.includes('BG')) return "txt-bg";
+        return "txt-bb";
+    }
+
+    window.applyColor = function(el) {
+        if (!el || el.selectedIndex < 0) return;
+        el.className = "p-select";
+        const val = el.options[el.selectedIndex].text;
+        const clsMatch = val.match(/\[(.*?)\]/);
+        const cls = clsMatch ? clsMatch[1] : el.value;
+        const colorClass = window.getTxtClass(cls);
+        el.classList.add(colorClass);
+        const colorCode = getComputedStyle(document.documentElement).getPropertyValue('--cls-' + (colorClass.split('-')[1] || 'bb'));
+        el.style.borderLeftColor = colorCode;
+    }
+
+    window.editMatchBox = function(id) {
+        const box = document.getElementById(`match-box-${id}`);
+        box.querySelector('.btn-main').disabled = false; box.querySelector('.btn-main').innerText = "อัปเดตผล";
+        box.querySelector('.btn-main').classList.remove('saved'); box.querySelector('.btn-edit').style.display = 'none';
+        box.querySelectorAll('select, .btn-choice').forEach(el => el.disabled = false);
+    }
+
+    window.setBoxWin = function(btn, team) {
+        btn.parentElement.querySelectorAll('.btn-choice').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected'); btn.parentElement.dataset.winner = team;
+    }
+
+    function renderMemberList() {
+        const tbody = document.getElementById('memberListBody');
+        const members = window.allDataMemory.filter(i => i.Status);
+        if (members.length === 0) { tbody.innerHTML = `<tr><td style="padding:15px; text-align:center;">ยังไม่มีสมาชิก</td></tr>`; }
+        else {
+            let html = "";
+            members.slice().reverse().forEach(m => {
+                if(!m.Name) return;
+                html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:10px;"><b>${m.Name}</b><br><small style="color:var(--text-dim)">${m.Note || '-'}</small></td><td class="${window.getTxtClass(m.Class)}" style="text-align:center;">${m.Class}</td><td style="text-align:right; font-size:0.8rem; color:${m.Status === 'Active' ? 'var(--accent)' : 'var(--danger)'}">${m.Status}</td></tr>`;
+            });
+            tbody.innerHTML = html;
+        }
+    }
+
+    window.openStats = function() { document.getElementById('statsModal').style.display = "flex"; renderMiniStats(); }
+    window.closeStats = function() { document.getElementById('statsModal').style.display = "none"; }
+    
+    function renderMiniStats() {
+        const stats = window.allDataMemory.filter(i => i.TotalPlayed !== undefined);
+        let sorted = stats.sort((a, b) => b.TotalPlayed - a.TotalPlayed);
+        let html = "";
+        sorted.forEach(m => { if(m.Name) html += `<div class="modal-row"><div><b>${m.Name}</b></div><div class="${window.getTxtClass(m.Class)}" style="text-align:center;">${m.Class}</div><div style="text-align:right;"><b>${m.TotalPlayed}</b> เกม</div></div>`; });
+        document.getElementById('miniStatsList').innerHTML = html || "<div style='padding:20px; text-align:center;'>ไม่มีข้อมูล</div>";
+    }
+
+</script>
+</body>
+</html>
