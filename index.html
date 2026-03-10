@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Badminton Hub Pro (Ultimate Stable)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-body: #1e2124; --bg-card: #2f3136; --text-main: #ffffff;
+            --text-dim: #b9bbbe; --accent: #43b581; --danger: #f04747; --border: #40444b; --warning: #faa61a;
+            --cls-p: #ff66b2; --cls-s: #ff4d4d; --cls-n: #ffaa00; --cls-bg: #33ccff; --cls-bb: #44ffaa;
+            --header-height: 60px;
+        }
+        body { background-color: var(--bg-body); color: var(--text-main); font-family: 'Kanit', sans-serif; margin: 0; padding-bottom: 90px; }
+        
+        /* --- Header & Nav --- */
+        .page-header {
+            position: sticky; top: 0; background-color: var(--bg-body); z-index: 100;
+            padding: 15px; margin: 0; border-bottom: 1px solid var(--border);
+            display: flex; justify-content: space-between; align-items: center;
+            height: var(--header-height); box-sizing: border-box;
+        }
+        .page-header h2 {
+            border-left: 4px solid var(--accent); padding-left: 10px; margin: 0;
+            font-size: 1.1rem; display: flex; align-items: center; gap: 10px; width: 100%;
+        }
+
+        .container { padding: 10px; max-width: 600px; margin: auto; }
+        .page { display: none; animation: fadeIn 0.15s; }
+        .page.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        
+        .card { background: var(--bg-card); border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); position: relative; }
+        .game-label { position: absolute; top: -10px; right: 20px; background: var(--accent); color: white; padding: 2px 10px; border-radius: 10px; font-size: 0.75rem; font-weight: bold; }
+        
+        /* --- Class Colors --- */
+        .txt-p { color: var(--cls-p) !important; } .txt-s { color: var(--cls-s) !important; } 
+        .txt-n { color: var(--cls-n) !important; } .txt-bg { color: var(--cls-bg) !important; } 
+        .txt-bb { color: var(--cls-bb) !important; }
+
+        select, input { width: 100%; padding: 12px; margin-bottom: 10px; background: #36393f; border: 1px solid var(--border); color: white; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
+        .p-select { margin-bottom: 8px; border-left: 5px solid transparent; }
+        
+        .btn-main { width: 100%; padding: 14px; background: var(--accent); color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; }
+        .btn-main:disabled { background: #4f545c; cursor: not-allowed; }
+        .btn-main.saved { background: #4f545c; opacity: 0.8; }
+        .btn-mini { background: #5865f2; color: white; border: none; border-radius: 6px; padding: 6px 12px; font-size: 0.8rem; cursor: pointer; margin-left: auto; }
+        .btn-edit { background: var(--warning); color: #000; width: 100%; padding: 8px; border: none; border-radius: 10px; font-weight: bold; margin-top: 10px; display: none; cursor: pointer; font-size: 0.85rem; }
+
+        /* --- Match Grid & Buttons --- */
+        .btn-group { display: flex; gap: 8px; margin-bottom: 15px; }
+        .btn-choice { 
+            flex: 1; padding: 12px; background: #36393f; border: 1px solid var(--border); 
+            color: white; border-radius: 8px; cursor: pointer; font-size: 0.85rem; 
+            opacity: 1 !important; 
+        }
+        .btn-choice.selected { 
+            border-color: var(--accent) !important; 
+            background: rgba(67, 181, 129, 0.2) !important; 
+            color: var(--accent) !important; font-weight: bold; 
+        }
+        .btn-choice:disabled:not(.selected) { opacity: 0.4 !important; }
+
+        .btn-status { border: none; border-radius: 6px; padding: 6px 8px; font-size: 0.75rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 4px; margin: auto; }
+        .btn-out { background: rgba(240, 71, 71, 0.15); color: var(--danger); border: 1px solid var(--danger); }
+        .btn-in { background: rgba(67, 181, 129, 0.15); color: var(--accent); border: 1px solid var(--accent); }
+
+        .match-grid { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: center; margin-bottom: 15px; }
+        .vs-text { color: var(--danger); font-weight: bold; font-size: 1.1rem; text-align: center; }
+
+        /* --- Stats Table --- */
+        .stats-wrapper { background: var(--bg-card); border-radius: 12px; overflow: hidden; border: 1px solid var(--border); }
+        .stats-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+        .stats-table thead { background: #36393f; position: sticky; top: var(--header-height); z-index: 10; }
+        .stats-table th { padding: 12px 5px; text-align: center; color: var(--text-dim); border-bottom: 2px solid var(--border); background: #36393f; }
+        .stats-table td { padding: 12px 5px; border-bottom: 1px solid var(--border); text-align: center; }
+        .stats-table td:first-child { text-align: left; font-weight: 600; padding-left: 10px; }
+        
+        .status-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 5px; }
+        .dot-active { background: var(--accent); box-shadow: 0 0 5px var(--accent); }
+        .dot-off { background: var(--danger); }
+        .pct-badge { background: #40444b; padding: 2px 4px; border-radius: 4px; font-weight: bold; }
+
+        /* --- Sticky Modal --- */
+        .modal { 
+            display: none; position: fixed; z-index: 1000; 
+            left: 0; top: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.85); align-items: center; justify-content: center;
+        }
+        .modal-content { 
+            background: var(--bg-card); border-radius: 15px; width: 90%; max-width: 400px; 
+            max-height: 80vh; overflow: hidden; display: flex; flex-direction: column; position: relative;
+        }
+        .modal-header {
+            padding: 15px 20px; border-bottom: 1px solid var(--border);
+            display: flex; justify-content: space-between; align-items: center; background: var(--bg-card);
+        }
+        .modal-body { padding: 0 20px; overflow-y: auto; flex: 1; }
+        .btn-close-modal { font-size: 32px; color: var(--text-dim); cursor: pointer; line-height: 1; padding: 0 5px; }
+        .modal-row { display: grid; grid-template-columns: 1fr 60px 80px; gap: 10px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border); font-size: 0.95rem; }
+
+        .bottom-nav { position: fixed; bottom: 0; width: 100%; background: #202225; display: flex; border-top: 1px solid var(--border); padding: 10px 0; z-index: 200; }
+        .nav-item { flex: 1; text-align: center; color: var(--text-dim); cursor: pointer; font-size: 0.85rem; }
+        .nav-item.active { color: var(--accent); font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div id="statsModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 style="margin:0; color:var(--accent);">📊 สถิติย่อ (เกมที่เล่น)</h3>
+            <span class="btn-close-modal" onclick="closeStats()">&times;</span>
+        </div>
+        <div class="modal-body" id="miniStatsList"></div>
+        <div style="padding: 12px; background: #2f3136; border-top: 1px solid var(--border);">
+            <button class="btn-main" style="padding: 10px;" onclick="closeStats()">ปิดหน้าต่าง</button>
+        </div>
+    </div>
+</div>
+
+<div id="page1" class="page active">
+    <div class="page-header">
+        <h2>👥 สมาชิกเข้าก๊วน <span id="loading-indicator" style="font-size:0.7rem; display:none; color:var(--warning);">ซิงค์...</span></h2>
+    </div>
+    <div class="container">
+        <div class="card">
+            <input type="text" id="mem_name" placeholder="ชื่อเล่น">
+            <select id="mem_class" onchange="applyColor(this)">
+                <option value="BB">BB</option><option value="BB+">BB+</option><option value="BG">BG</option><option value="BG+">BG+</option><option value="N">N</option><option value="N+">N+</option><option value="S">S</option><option value="S+">S+</option><option value="P">P</option>
+            </select>
+            <input type="text" id="mem_note" placeholder="หมายเหตุ (ถ้ามี)">
+            <button class="btn-main" id="btn-reg" onclick="registerMember()">+ เพิ่มชื่อสมาชิก</button>
+        </div>
+        <div class="card" style="padding: 5px;">
+            <table style="width:100%; border-collapse:collapse;" id="memberListBody"></table>
+        </div>
+    </div>
+</div>
+
+<div id="page2" class="page">
+    <div class="page-header">
+        <h2>🏸 บันทึกผล <button class="btn-mini" onclick="openStats()">📊 สถิติย่อ</button></h2>
+    </div>
+    <div class="container">
+        <div id="matchContainer"></div>
+        <button id="btnAddNext" class="btn-main" style="background:transparent; border:2px dashed var(--border); color:var(--text-dim);" onclick="addNewMatchBox(true)">+ เพิ่มเกมถัดไป</button>
+    </div>
+</div>
+
+<div id="page3" class="page">
+    <div class="page-header">
+        <h2>📊 จัดการ & สถิติรวม</h2>
+    </div>
+    <div class="container" style="padding: 5px;">
+        <div class="stats-wrapper">
+            <table class="stats-table">
+                <thead>
+                    <tr>
+                        <th style="width: 25%;">ชื่อ</th>
+                        <th style="width: 15%;">คลาส</th>
+                        <th style="width: 15%;">เล่น</th>
+                        <th style="width: 20%;">W/L (%)</th>
+                        <th style="width: 25%;">จัดการ</th>
+                    </tr>
+                </thead>
+                <tbody id="fullStatsBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<nav class="bottom-nav">
+    <div class="nav-item active" onclick="showPage(1)">ลงชื่อ</div>
+    <div class="nav-item" onclick="showPage(2)">จดผล</div>
+    <div class="nav-item" onclick="showPage(3)">สถิติ</div>
+</nav>
+
+<script>
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbw0MeFWYYKR5mQa5uFKKbroIlzhDHepZO3V1VIw6UeiRCCn0sOABIbe-rNAWp_Khrq34Q/exec";
+    let allDataMemory = [];
+    let gameCount = 0;
+    let isHistoryLoaded = false;
+
+    async function loadData() {
+        const loadingInd = document.getElementById('loading-indicator');
+        if(loadingInd) loadingInd.style.display = 'inline-block';
+        try {
+            const res = await fetch(WEB_APP_URL);
+            allDataMemory = await res.json();
+            renderAll();
+        } catch (err) { console.error("Sync Error:", err); }
+        if(loadingInd) loadingInd.style.display = 'none';
+    }
+
+    function renderAll() {
+        renderMemberList();
+        renderStatsTable();
+        updateDropdowns();
+        if (document.getElementById('page2').classList.contains('active') && !isHistoryLoaded) {
+            renderMatchHistory();
+        }
+    }
+
+    function showPage(num) {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        document.getElementById('page' + num).classList.add('active');
+        document.querySelectorAll('.nav-item')[num-1].classList.add('active');
+        window.scrollTo(0, 0);
+        loadData();
+    }
+
+    function updateDropdowns() {
+        const activeMembers = allDataMemory.filter(m => m.Status === "Active");
+        let options = '<option value="">- เลือก -</option>';
+        activeMembers.forEach(m => { options += `<option value="${m.Name}">${m.Name} [${m.Class}]</option>`; });
+        document.querySelectorAll('#matchContainer .p-select').forEach(s => { 
+            if(!s.disabled) { 
+                const cur = s.value; s.innerHTML = options; s.value = cur; 
+                if(cur) applyColor(s); 
+            } 
+        });
+    }
+
+    async function registerMember() {
+        const nameInput = document.getElementById('mem_name');
+        const classInput = document.getElementById('mem_class');
+        const noteInput = document.getElementById('mem_note');
+        if(!nameInput.value) return alert("ใส่ชื่อ!");
+        const btn = document.getElementById('btn-reg');
+        btn.disabled = true; btn.innerText = "⏳...";
+        await fetch(WEB_APP_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ type: "new_member", name: nameInput.value, class: classInput.value, note: noteInput.value }) });
+        nameInput.value = ""; noteInput.value = ""; classInput.selectedIndex = 0; applyColor(classInput);
+        btn.disabled = false; btn.innerText = "+ เพิ่มชื่อสมาชิก";
+        loadData();
+    }
+
+    function renderStatsTable() {
+        const body = document.getElementById('fullStatsBody');
+        const stats = allDataMemory.filter(i => i.TotalPlayed !== undefined);
+        let sorted = stats.sort((a, b) => b.TotalPlayed - a.TotalPlayed);
+        let html = "";
+        sorted.forEach(m => {
+            if(!m.Name) return;
+            const isActive = m.Status === "Active";
+            html += `<tr>
+                <td><span class="status-dot ${isActive ? "dot-active" : "dot-off"}"></span>${m.Name}</td>
+                <td class="${getTxtClass(m.Class)}">${m.Class}</td>
+                <td style="font-weight:bold;">${m.TotalPlayed}</td>
+                <td><span style="color:var(--accent);">${m.Win}</span>/<span style="color:var(--danger);">${m.Loss}</span><br><span class="pct-badge">${(m.WinRate * 100 || 0).toFixed(0)}%</span></td>
+                <td><button class="btn-status ${isActive ? "btn-out" : "btn-in"}" onclick="quickStatusUpdate('${m.Name}', '${isActive ? "checkout" : "undo"}')">${isActive ? "🚪 ออก" : "🏸 เข้า"}</button></td>
+            </tr>`;
+        });
+        body.innerHTML = html || "<tr><td colspan='5'>กำลังโหลด...</td></tr>";
+    }
+
+    async function quickStatusUpdate(name, action) {
+        if(!confirm(`ยืนยันเปลี่ยนสถานะ: ${name}?`)) return;
+        await fetch(WEB_APP_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ type: action, name: name }) });
+        loadData();
+    }
+
+    function renderMatchHistory() {
+        const container = document.getElementById('matchContainer');
+        const historyData = allDataMemory.filter(item => item.Type === "MatchHistory");
+        if (historyData.length > 0 && !isHistoryLoaded) {
+            container.innerHTML = ""; gameCount = 0;
+            historyData.forEach((m) => {
+                gameCount++;
+                const box = createMatchElement(gameCount);
+                container.appendChild(box);
+                const b = document.getElementById(`match-box-${gameCount}`);
+                const selects = b.querySelectorAll('.p-select');
+                [m.P1A, m.P2A, m.P1B, m.P2B].forEach((name, i) => {
+                    if(name) {
+                        const opt = document.createElement('option'); opt.value = name; opt.text = name;
+                        selects[i].add(opt); selects[i].value = name;
+                    }
+                });
+                const btnGroup = b.querySelector('.btn-group');
+                btnGroup.dataset.winner = m.Winner;
+                const winBtn = Array.from(btnGroup.querySelectorAll('.btn-choice')).find(btn => (m.Winner === 'Team A' && btn.innerText.includes('A')) || (m.Winner === 'Team B' && btn.innerText.includes('B')));
+                if(winBtn) winBtn.classList.add('selected');
+                const btnSave = b.querySelector('.btn-main');
+                btnSave.innerText = "บันทึกแล้ว (ประวัติ)"; btnSave.classList.add('saved'); btnSave.disabled = true;
+                b.querySelector('.btn-edit').style.display = 'block';
+                b.querySelectorAll('select, .btn-choice').forEach(el => el.disabled = true);
+            });
+            isHistoryLoaded = true; addNewMatchBox();
+        } else if (gameCount === 0) { addNewMatchBox(); }
+    }
+
+    function createMatchElement(id) {
+        const div = document.createElement('div'); div.className = 'card'; div.id = `match-box-${id}`;
+        div.innerHTML = `<div class="game-label">เกมที่ ${id}</div><div class="match-grid"><div><select class="p-select" onchange="applyColor(this)" data-role="p1a"></select><select class="p-select" onchange="applyColor(this)" data-role="p2a"></select></div><div class="vs-text">VS</div><div><select class="p-select" onchange="applyColor(this)" data-role="p1b"></select><select class="p-select" onchange="applyColor(this)" data-role="p2b"></select></div></div><div class="btn-group"><button class="btn-choice" onclick="setBoxWin(this, 'Team A')">A ชนะ</button><button class="btn-choice" onclick="setBoxWin(this, 'Team B')">B ชนะ</button></div><button class="btn-main" onclick="saveMatchBox(${id})">บันทึกผล</button><button class="btn-edit" onclick="editMatchBox(${id})">✎ แก้ไข</button>`;
+        return div;
+    }
+
+    function addNewMatchBox(shouldScroll = false) {
+        gameCount++;
+        const container = document.getElementById('matchContainer');
+        container.appendChild(createMatchElement(gameCount));
+        updateDropdowns();
+        if(shouldScroll) window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+    }
+
+    function getTxtClass(cls) {
+        if(!cls) return "";
+        if(cls.includes('P')) return "txt-p"; if(cls.includes('S')) return "txt-s";
+        if(cls.includes('N')) return "txt-n"; if(cls.includes('BG')) return "txt-bg";
+        return "txt-bb";
+    }
+
+    function applyColor(el) {
+        if (!el || el.selectedIndex < 0) return;
+        el.className = "p-select";
+        const val = el.options[el.selectedIndex].text;
+        const clsMatch = val.match(/\[(.*?)\]/);
+        const cls = clsMatch ? clsMatch[1] : el.value;
+        const colorClass = getTxtClass(cls);
+        el.classList.add(colorClass);
+        const colorCode = getComputedStyle(document.documentElement).getPropertyValue('--cls-' + (colorClass.split('-')[1] || 'bb'));
+        el.style.borderLeftColor = colorCode;
+    }
+
+    async function saveMatchBox(id) {
+        const box = document.getElementById(`match-box-${id}`);
+        const winner = box.querySelector('.btn-group').dataset.winner;
+        const p1a = box.querySelector('[data-role="p1a"]').value;
+        if (!winner || !p1a) return alert("ข้อมูลไม่ครบ!");
+        const btn = box.querySelector('.btn-main');
+        btn.disabled = true; btn.innerText = "⏳...";
+        const data = { teamA_p1: p1a, teamA_p2: box.querySelector('[data-role="p2a"]').value, teamB_p1: box.querySelector('[data-role="p1b"]').value, teamB_p2: box.querySelector('[data-role="p2b"]').value, winner: winner };
+        await fetch(WEB_APP_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(data) });
+        btn.innerText = "✓ สำเร็จ"; btn.classList.add('saved');
+        box.querySelector('.btn-edit').style.display = 'block';
+        box.querySelectorAll('select, .btn-choice').forEach(el => el.disabled = true);
+        loadData();
+    }
+
+    function editMatchBox(id) {
+        const box = document.getElementById(`match-box-${id}`);
+        box.querySelector('.btn-main').disabled = false; box.querySelector('.btn-main').innerText = "บันทึกผล";
+        box.querySelector('.btn-main').classList.remove('saved'); box.querySelector('.btn-edit').style.display = 'none';
+        box.querySelectorAll('select, .btn-choice').forEach(el => el.disabled = false);
+    }
+
+    function setBoxWin(btn, team) {
+        btn.parentElement.querySelectorAll('.btn-choice').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected'); btn.parentElement.dataset.winner = team;
+    }
+
+    function renderMemberList() {
+        const tbody = document.getElementById('memberListBody');
+        const members = allDataMemory.filter(i => i.Status);
+        if (members.length === 0) { tbody.innerHTML = `<tr><td style="padding:15px; text-align:center;">รอข้อมูล...</td></tr>`; }
+        else {
+            let html = "";
+            members.slice().reverse().forEach(m => {
+                if(!m.Name) return;
+                html += `<tr style="border-bottom:1px solid var(--border);"><td style="padding:10px;"><b>${m.Name}</b><br><small style="color:var(--text-dim)">${m.Note || '-'}</small></td><td class="${getTxtClass(m.Class)}" style="text-align:center;">${m.Class}</td><td style="text-align:right; font-size:0.8rem; color:${m.Status === 'Active' ? 'var(--accent)' : 'var(--danger)'}">${m.Status}</td></tr>`;
+            });
+            tbody.innerHTML = html;
+        }
+    }
+
+    function openStats() { document.getElementById('statsModal').style.display = "flex"; renderMiniStats(); }
+    function closeStats() { document.getElementById('statsModal').style.display = "none"; }
+    function renderMiniStats() {
+        const stats = allDataMemory.filter(i => i.TotalPlayed !== undefined);
+        let sorted = stats.sort((a, b) => b.TotalPlayed - a.TotalPlayed);
+        let html = "";
+        sorted.forEach(m => { if(m.Name) html += `<div class="modal-row"><div><b>${m.Name}</b></div><div class="${getTxtClass(m.Class)}" style="text-align:center;">${m.Class}</div><div style="text-align:right;"><b>${m.TotalPlayed}</b> เกม</div></div>`; });
+        document.getElementById('miniStatsList').innerHTML = html || "<div style='padding:20px; text-align:center;'>ไม่มีข้อมูล</div>";
+    }
+
+    window.onload = loadData;
+</script>
+</body>
+</html>
