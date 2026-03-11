@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Badminton Hub Pro (V4.6 - Full Restoration)</title>
+    <title>Badminton Hub Pro (V4.8 - Smart Sorting)</title>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -19,7 +19,6 @@
         .card { background: var(--bg-card); border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); position: relative; }
         .card.hidden-match { display: none; }
         
-        /* Dashboard Stats */
         .dash-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 20px; }
         .dash-item { background: #36393f; padding: 12px 5px; border-radius: 10px; text-align: center; border: 1px solid var(--border); }
         .dash-val { display: block; font-size: 1.3rem; font-weight: bold; color: var(--accent); }
@@ -31,37 +30,26 @@
         .txt-bb { color: var(--cls-bb) !important; }
         
         select, input { width: 100%; padding: 12px; margin-bottom: 10px; background: #36393f; border: 1px solid var(--border); color: white; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
-        .p-select { margin-bottom: 8px; border-left: 5px solid transparent; }
+        .p-select { margin-bottom: 8px; border-left: 6px solid #40444b; }
         
         .btn-main { width: 100%; padding: 14px; background: var(--accent); color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; }
         .btn-main:disabled { background: #4f545c; opacity: 0.6; cursor: not-allowed; }
-        
         .btn-add-manual { width: 100%; padding: 15px; background: transparent; border: 2px dashed var(--border); color: var(--text-dim); border-radius: 12px; font-weight: bold; cursor: pointer; margin-top: 10px; }
-
-        /* Status Buttons Fix */
         .btn-status { border: none; border-radius: 6px; padding: 6px 4px; font-size: 0.7rem; font-weight: bold; cursor: pointer; width: 100%; }
         .btn-out { background: rgba(240, 71, 71, 0.15); color: var(--danger); border: 1px solid var(--danger); }
         .btn-in { background: rgba(67, 181, 129, 0.15); color: var(--accent); border: 1px solid var(--accent); }
-
-        .header-btns { display: flex; gap: 8px; }
         .btn-mini { background: #5865f2; color: white; border: none; border-radius: 6px; padding: 6px 10px; font-size: 0.75rem; font-weight: bold; cursor: pointer; }
-        .btn-mini.toggle-active { background: var(--warning); color: #000; }
-
         .btn-group { display: flex; gap: 10px; margin-bottom: 10px; }
         .btn-choice { flex: 1; padding: 10px; background: #36393f; border: 1px solid var(--border); color: var(--text-dim); border-radius: 8px; cursor: pointer; font-weight: bold; }
         .btn-choice.selected { background: rgba(67, 181, 129, 0.2); border-color: var(--accent); color: var(--accent); }
-        
         .btn-saved-compact { background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--accent); padding: 8px; font-size: 0.85rem; border-radius: 8px; width: 100%; text-align: center; margin-top: 5px; font-weight: bold; }
         .btn-edit-link { background: transparent; border: none; color: var(--warning); font-size: 0.75rem; text-decoration: underline; margin-top: 8px; display: none; width: 100%; cursor: pointer; }
-        
         .m-table { width: 100%; border-collapse: collapse; }
         .m-table th { color: var(--text-dim); font-size: 0.7rem; padding: 10px 4px; border-bottom: 1px solid var(--border); text-align: center; }
         .m-table td { padding: 12px 4px; border-bottom: 1px solid #36393f; font-size: 0.9rem; text-align: center; }
         .m-table th:first-child, .m-table td:first-child { text-align: left; padding-left: 10px; }
-        
-        .status-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; }
-        .dot-active { background: var(--accent); } .dot-off { background: var(--danger); }
-
+        .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+        .dot-active { background: var(--accent); box-shadow: 0 0 5px var(--accent); } .dot-off { background: var(--danger); }
         .match-grid { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: center; margin-bottom: 10px; }
         .vs-text { color: var(--danger); font-weight: bold; text-align: center; }
         .bottom-nav { position: fixed; bottom: 0; width: 100%; background: #202225; display: flex; border-top: 1px solid var(--border); padding: 10px 0; z-index: 200; }
@@ -128,51 +116,19 @@
     <div class="nav-item" onclick="showPage(3)">ตั้งค่า</div>
 </nav>
 
-<div id="deleteModal" class="modal">
-    <div class="modal-content" style="max-height: 300px; width: 85%;">
-        <div class="modal-body" style="text-align: center; padding: 20px;">
-            <h3 style="color:var(--danger);">⚠️ ยืนยันการลบ</h3>
-            <p style="color: var(--text-dim); font-size: 0.85rem;">พิมพ์ <strong>delete</strong> เพื่อล้างข้อมูล</p>
-            <input type="text" id="deleteConfirmInput" onkeyup="checkDeleteInput()" style="text-align: center;">
-            <button class="btn-main" id="btnConfirmDelete" onclick="executeDelete()" disabled style="background:var(--danger); margin-bottom:10px;">ยืนยันลบทั้งหมด</button>
-            <button class="btn-main" style="background:#4f545c;" onclick="closeDeleteModal()">ยกเลิก</button>
-        </div>
-    </div>
-</div>
-
-<div id="statsModal" class="modal">
-    <div class="modal-content">
-        <div style="padding: 15px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
-            <h3 style="margin:0; color:var(--accent);">📊 สถิติเกม</h3>
-            <span style="font-size: 24px; cursor: pointer; color: var(--text-dim);" onclick="closeStats()">&times;</span>
-        </div>
-        <div style="overflow-y: auto; padding: 10px;">
-            <table class="m-table"><thead><tr><th style="text-align:left;">ชื่อ</th><th>คลาส</th><th>เกม</th><th>Win%</th></tr></thead><tbody id="miniStatsTableBody"></tbody></table>
-        </div>
-        <div style="padding: 10px;"><button class="btn-main" onclick="closeStats()">ปิด</button></div>
-    </div>
-</div>
+<!-- Modals -->
+<div id="deleteModal" class="modal"><div class="modal-content"><div class="modal-body" style="text-align:center; padding:20px;"><h3 style="color:var(--danger);">⚠️ ยืนยันการลบ</h3><p>พิมพ์ <strong>delete</strong> เพื่อล้างข้อมูล</p><input type="text" id="deleteConfirmInput" onkeyup="checkDeleteInput()" style="text-align:center;"><button class="btn-main" id="btnConfirmDelete" onclick="executeDelete()" disabled style="background:var(--danger); margin-bottom:10px;">ยืนยันลบทั้งหมด</button><button class="btn-main" style="background:#4f545c;" onclick="closeDeleteModal()">ยกเลิก</button></div></div></div>
+<div id="statsModal" class="modal"><div class="modal-content"><div style="padding:15px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;"><h3 style="margin:0; color:var(--accent);">📊 สถิติเกม</h3><span style="font-size:24px; cursor:pointer; color:var(--text-dim);" onclick="closeStats()">&times;</span></div><div style="overflow-y:auto; padding:10px;"><table class="m-table"><thead><tr><th style="text-align:left;">ชื่อ</th><th>คลาส</th><th>เกม</th><th>Win%</th></tr></thead><tbody id="miniStatsTableBody"></tbody></table></div><div style="padding:10px;"><button class="btn-main" onclick="closeStats()">ปิด</button></div></div></div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, updateDoc, doc, serverTimestamp, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-    const firebaseConfig = {
-        apiKey: "AIzaSyAM_cIiH6GR3N47H3Ydtma7fhSI_Hvk3Gk",
-        authDomain: "badminton-hub-99b35.firebaseapp.com",
-        projectId: "badminton-hub-99b35",
-        storageBucket: "badminton-hub-99b35.firebasestorage.app",
-        messagingSenderId: "488493837313",
-        appId: "1:488493837313:web:054096949a9ed4db7f6400"
-    };
-
+    const firebaseConfig = { apiKey: "AIzaSyAM_cIiH6GR3N47H3Ydtma7fhSI_Hvk3Gk", authDomain: "badminton-hub-99b35.firebaseapp.com", projectId: "badminton-hub-99b35", storageBucket: "badminton-hub-99b35.firebasestorage.app", messagingSenderId: "488493837313", appId: "1:488493837313:web:054096949a9ed4db7f6400" };
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    window.allDataMemory = [];
-    window.fireMembers = [];
-    window.fireMatches = [];
-    window.hideSavedMatches = false;
+    window.allDataMemory = []; window.fireMembers = []; window.fireMatches = []; window.hideSavedMatches = false;
 
     onSnapshot(collection(db, "members"), (snapshot) => {
         window.fireMembers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -182,16 +138,14 @@
     onSnapshot(query(collection(db, "matches"), orderBy("timestamp", "asc")), (snapshot) => {
         window.fireMatches = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         calculateStats();
-        if(document.getElementById('page2').classList.contains('active')) {
-            renderMatchHistoryStrict();
-        }
+        if(document.getElementById('page2').classList.contains('active')) renderMatchHistoryStrict();
     });
 
     function calculateStats() {
         let statsMap = {};
-        window.fireMembers.forEach(m => { statsMap[m.name] = { id: m.id, Name: m.name, Class: m.class, Status: m.status, TotalPlayed: 0, Win: 0, Loss: 0 }; });
+        window.fireMembers.forEach(m => { statsMap[m.name] = { id: m.id, Name: m.name, Class: m.class, Status: m.status, TotalPlayed: 0, Win: 0 }; });
         window.fireMatches.forEach(m => {
-            const update = (p, isWin) => { if(p && statsMap[p]) { statsMap[p].TotalPlayed++; if(isWin) statsMap[p].Win++; else statsMap[p].Loss++; } };
+            const update = (p, isWin) => { if(p && statsMap[p]) { statsMap[p].TotalPlayed++; if(isWin) statsMap[p].Win++; } };
             if(m.winner === 'Team A') { update(m.p1a, true); update(m.p2a, true); update(m.p1b, false); update(m.p2b, false); }
             else if(m.winner === 'Team B') { update(m.p1a, false); update(m.p2a, false); update(m.p1b, true); update(m.p2b, true); }
         });
@@ -214,7 +168,7 @@
         const players = Array.from(box.querySelectorAll('.p-select')).map(s => s.value);
         if(players.includes("") || !winner) return alert("เลือกคนและทีมชนะให้ครบครับ!");
         
-        btn.disabled = true; btn.innerText = "กำลังบันทึก...";
+        btn.disabled = true; btn.innerText = "บันทึก...";
         delete box.dataset.editing;
         const data = { p1a: players[0], p2a: players[1], p1b: players[2], p2b: players[3], winner, timestamp: serverTimestamp() };
         try {
@@ -236,14 +190,22 @@
 </script>
 
 <script>
+    // --- Utils ---
+    window.getClassWeight = (cls) => {
+        const weights = { 'P': 10, 'S+': 9, 'S': 8, 'N+': 7, 'N': 6, 'BG+': 5, 'BG': 4, 'BB+': 3, 'BB': 2 };
+        return weights[cls.toUpperCase()] || 0;
+    };
+
     window.getDotEmoji = (cls) => {
         if(!cls) return "⚪";
-        if(cls.includes('P')) return "🟣"; if(cls.includes('S')) return "🔴";
-        if(cls.includes('N')) return "🟠"; if(cls.includes('BG')) return "🔵";
+        const c = cls.toUpperCase();
+        if(c.includes('P')) return "🟣"; if(c.includes('S')) return "🔴";
+        if(c.includes('N')) return "🟠"; if(c.includes('BG')) return "🔵";
         return "🟢";
     };
 
     window.getPartnerCount = (p1, p2) => {
+        if(!p1 || !p2) return 0;
         let count = 0;
         window.fireMatches.forEach(m => {
             if((m.p1a===p1 && m.p2a===p2) || (m.p1a===p2 && m.p2a===p1)) count++;
@@ -253,22 +215,62 @@
     };
 
     window.getTxtClass = (cls) => {
-        if(!cls) return ""; cls = cls.toUpperCase();
-        if(cls.includes('P')) return "txt-p"; if(cls.includes('S')) return "txt-s";
-        if(cls.includes('N')) return "txt-n"; if(cls.includes('BG')) return "txt-bg";
+        if(!cls) return ""; const c = cls.toUpperCase();
+        if(c.includes('P')) return "txt-p"; if(c.includes('S')) return "txt-s";
+        if(c.includes('N')) return "txt-n"; if(c.includes('BG')) return "txt-bg";
         return "txt-bb";
     };
 
+    window.getClassHex = (cls) => {
+        const txtClass = getTxtClass(cls);
+        if(!txtClass) return "#40444b";
+        const varName = '--cls-' + txtClass.split('-')[1];
+        return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+    };
+
+    // --- Render Logic ---
+
+    // [1] จัดการผู้เล่น: เรียง (สถานะ -> คลาส -> Win%)
     window.renderMemberList = () => {
         const tbody = document.getElementById('memberListBody');
         let html = "";
-        const sorted = [...window.allDataMemory].sort((a,b) => (a.Status==="Active" ? -1:1) || (b.TotalPlayed - a.TotalPlayed));
+        const sorted = [...window.allDataMemory].sort((a, b) => {
+            if (a.Status !== b.Status) return a.Status === "Active" ? -1 : 1;
+            const weightA = window.getClassWeight(a.Class);
+            const weightB = window.getClassWeight(b.Class);
+            if (weightA !== weightB) return weightB - weightA;
+            const wrA = a.TotalPlayed > 0 ? (a.Win / a.TotalPlayed) : 0;
+            const wrB = b.TotalPlayed > 0 ? (b.Win / b.TotalPlayed) : 0;
+            return wrB - wrA;
+        });
+
         sorted.forEach(m => {
             const isActive = m.Status === "Active";
-            const wr = m.TotalPlayed > 0 ? Math.round((m.Win/m.TotalPlayed)*100) : 0;
+            const wr = m.TotalPlayed > 0 ? Math.round((m.Win / m.TotalPlayed) * 100) : 0;
             html += `<tr><td><span class="status-dot ${isActive?'dot-active':'dot-off'}"></span><b>${m.Name}</b></td><td class="${getTxtClass(m.Class)}">${m.Class}</td><td><b>${m.TotalPlayed}</b></td><td>${wr}%</td><td><button class="btn-status ${isActive?'btn-out':'btn-in'}" onclick="quickStatusUpdate('${m.Name}','${isActive?'checkout':'undo'}')">${isActive?'ออก':'เข้า'}</button></td></tr>`;
         });
         tbody.innerHTML = html;
+    };
+
+    // [2] สถิติย่อ: เรียงตามจำนวนเกมที่เล่น (ใครแบกสนามอยู่บน)
+    window.openStats = () => {
+        document.getElementById('statsModal').style.display = "flex";
+        let html = "";
+        const statsSorted = [...window.allDataMemory].sort((a, b) => {
+            if (b.TotalPlayed !== a.TotalPlayed) return b.TotalPlayed - a.TotalPlayed;
+            return window.getClassWeight(b.Class) - window.getClassWeight(a.Class);
+        });
+
+        statsSorted.forEach(m => {
+            const wr = m.TotalPlayed ? Math.round((m.Win / m.TotalPlayed) * 100) : 0;
+            html += `<tr>
+                <td style="text-align:left;"><b>${m.Name}</b></td>
+                <td class="${getTxtClass(m.Class)}">${m.Class}</td>
+                <td><b>${m.TotalPlayed}</b></td>
+                <td style="color:${wr >= 50 ? 'var(--accent)' : 'var(--text-dim)'}">${wr}%</td>
+            </tr>`;
+        });
+        document.getElementById('miniStatsTableBody').innerHTML = html;
     };
 
     window.renderMatchHistoryStrict = () => {
@@ -309,10 +311,7 @@
             box.querySelector('.btn-edit-link').style.display = 'block';
         });
 
-        // สร้างกล่องเปล่าถ้ายังไม่มี
-        if(container.querySelectorAll('.card:not([data-docid])').length === 0) {
-            addNewManualBox();
-        }
+        if(container.querySelectorAll('.card:not([data-docid])').length === 0) addNewManualBox();
     };
 
     window.addNewManualBox = () => {
@@ -327,7 +326,6 @@
         const curVal = selectEl.value;
         const box = selectEl.closest('.card');
         const role = selectEl.dataset.role;
-        const allSelectedInBox = Array.from(box.querySelectorAll('.p-select')).map(s => s.value).filter(v => v !== "" && v !== curVal);
         
         let partnerVal = "";
         if(role==='p1a') partnerVal = box.querySelector('[data-role="p2a"]').value;
@@ -337,11 +335,10 @@
 
         selectEl.innerHTML = '<option value="">- เลือก -</option>';
         window.allDataMemory.filter(m => m.Status === "Active").forEach(m => {
-            if(allSelectedInBox.includes(m.Name)) return;
             let text = `${window.getDotEmoji(m.Class)} ${m.Name} [${m.Class}]`;
             if(partnerVal && m.Name !== partnerVal) {
                 const pc = window.getPartnerCount(m.Name, partnerVal);
-                if(pc > 0) text += ` 🤝${pc > 1 ? '×'+pc : ''}`;
+                if(pc > 0) text += ` 🤝${pc}`;
             }
             const opt = document.createElement('option'); opt.value = m.Name; opt.text = text;
             selectEl.appendChild(opt);
@@ -352,12 +349,13 @@
 
     window.applyColorManual = (el, name) => {
         const m = window.allDataMemory.find(i => i.Name === name);
-        const colorClass = m ? getTxtClass(m.Class) : "";
-        el.style.borderLeftColor = colorClass ? getComputedStyle(document.documentElement).getPropertyValue('--cls-'+colorClass.split('-')[1]) : 'transparent';
+        if(m) el.style.borderLeftColor = getClassHex(m.Class);
+        else el.style.borderLeftColor = "#40444b";
     };
 
     window.handleSel = (el) => {
         const box = el.closest('.card');
+        applyColorManual(el, el.value);
         box.querySelectorAll('.p-select').forEach(s => window.refreshSelectOptionsManual(s));
     };
 
@@ -391,14 +389,6 @@
         if(n===2) renderMatchHistoryStrict();
     };
 
-    window.openStats = () => {
-        document.getElementById('statsModal').style.display="flex";
-        let html = "";
-        [...window.allDataMemory].sort((a,b)=>b.TotalPlayed-a.TotalPlayed).forEach(m => {
-            html += `<tr><td><b>${m.Name}</b></td><td class="${getTxtClass(m.Class)}">${m.Class}</td><td><b>${m.TotalPlayed}</b></td><td>${m.TotalPlayed?Math.round((m.Win/m.TotalPlayed)*100):0}%</td></tr>`;
-        });
-        document.getElementById('miniStatsTableBody').innerHTML = html;
-    };
     window.closeStats = () => document.getElementById('statsModal').style.display="none";
     window.openDeleteModal = (t) => { window.deleteTarget=t; document.getElementById('deleteConfirmInput').value=""; document.getElementById('btnConfirmDelete').disabled=true; document.getElementById('deleteModal').style.display="flex"; };
     window.closeDeleteModal = () => document.getElementById('deleteModal').style.display="none";
