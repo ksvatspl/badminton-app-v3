@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Badminton Hub Pro (V4.9 - Partner Fix)</title>
+    <title>Badminton Hub Pro (V5.0 - Partner & Manual Fix)</title>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -237,11 +237,13 @@
     };
 
     window.getPartnerCount = (p1, p2) => {
-        if(!p1 || !p2) return 0;
+        if(!p1 || !p2 || p1 === p2) return 0;
         let count = 0;
         window.fireMatches.forEach(m => {
-            if((m.p1a===p1 && m.p2a===p2) || (m.p1a===p2 && m.p2a===p1)) count++;
-            if((m.p1b===p1 && m.p2b===p2) || (m.p1b===p2 && m.p2b===p1)) count++;
+            // Check Team A
+            if((m.p1a === p1 && m.p2a === p2) || (m.p1a === p2 && m.p2a === p1)) count++;
+            // Check Team B
+            if((m.p1b === p1 && m.p2b === p2) || (m.p1b === p2 && m.p2b === p1)) count++;
         });
         return count;
     };
@@ -340,7 +342,9 @@
             box.dataset.docid = m.id;
             if(window.hideSavedMatches && !box.dataset.editing) box.classList.add('hidden-match');
             else box.classList.remove('hidden-match');
+            
             if(box.dataset.editing === "true") return;
+
             const selects = box.querySelectorAll('.p-select');
             const players = [m.p1a, m.p2a, m.p1b, m.p2b];
             selects.forEach((sel, i) => {
@@ -361,7 +365,7 @@
             }
             box.querySelector('.btn-edit-link').style.display = 'block';
         });
-        if(container.querySelectorAll('.card:not([data-docid])').length === 0) addNewManualBox();
+        // REMOVED: Auto-add card logic. Now only manual.
     };
 
     window.addNewManualBox = () => {
@@ -370,6 +374,8 @@
         const box = createMatchElement(nextNum);
         container.appendChild(box);
         box.querySelectorAll('.p-select').forEach(s => window.refreshSelectOptionsManual(s));
+        // Scroll to the new box
+        box.scrollIntoView({ behavior: 'smooth', block: 'end' });
     };
 
     window.refreshSelectOptionsManual = (selectEl) => {
@@ -377,13 +383,13 @@
         const box = selectEl.closest('.card');
         const role = selectEl.dataset.role;
         
-        // 1. Get other selected players in this card to exclude them
+        // Get other selected players in this card to exclude them
         const otherSelectedNames = Array.from(box.querySelectorAll('.p-select'))
             .filter(s => s !== selectEl)
             .map(s => s.value)
             .filter(v => v !== "");
 
-        // 2. Identify partner for Partner Count display
+        // Identify partner for Partner Count display (p1a <-> p2a, p1b <-> p2b)
         let partnerVal = "";
         if(role==='p1a') partnerVal = box.querySelector('[data-role="p2a"]').value;
         else if(role==='p2a') partnerVal = box.querySelector('[data-role="p1a"]').value;
@@ -392,7 +398,6 @@
 
         selectEl.innerHTML = '<option value="">- เลือก -</option>';
         window.allDataMemory.filter(m => m.Status === "Active").forEach(m => {
-            // Exclude names already chosen in other slots of the SAME card
             if (otherSelectedNames.includes(m.Name)) return;
 
             let icon = "⚪";
@@ -401,10 +406,13 @@
             else if(m.Class.includes('BB')) icon = "🟢";
 
             let text = `${icon} ${m.Name} [${m.Class}]`;
+            
+            // Highlight Partner Count
             if(partnerVal && m.Name !== partnerVal) {
                 const pc = window.getPartnerCount(m.Name, partnerVal);
                 if(pc > 0) text += ` 🤝${pc}`;
             }
+
             const opt = document.createElement('option'); 
             opt.value = m.Name; opt.text = text;
             selectEl.appendChild(opt);
@@ -422,7 +430,9 @@
     window.handleSel = (el) => {
         const box = el.closest('.card');
         applyColorManual(el, el.value);
-        // Refresh all selects in the card to update exclusion lists and partner counts
+        
+        // If p1 is selected, we MUST refresh p2 to show partner count relative to p1
+        // and vice versa.
         box.querySelectorAll('.p-select').forEach(s => window.refreshSelectOptionsManual(s));
     };
 
