@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Badminton Hub Pro (V5.6 - Live Match Stable)</title>
+    <title>Badminton Hub Pro (V5.7 - Manual Entry Only)</title>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -239,7 +239,6 @@
         cancelEditMember();
     };
 
-    // --- New Live Logic Integrated into Firebase ---
     window.saveMatchBox = async function(matchNum, status = 'saved') {
         const box = document.querySelector(`.card[data-matchnum="${matchNum}"]`);
         const winner = box.querySelector('.btn-group').dataset.winner;
@@ -274,10 +273,16 @@
 </script>
 
 <script>
-    // --- Logic Restored & Enhanced for Live Status ---
+    // --- Manual Only Logic (No Auto-Add) ---
     window.renderMatchHistoryStrict = () => {
         const container = document.getElementById('matchContainer');
         let highestNum = 0;
+        
+        // กรอง Card ที่ไม่ได้ถูกแก้ไขอยู่ และไม่มีใน Firebase ออกไป (ยกเว้นใบที่พึ่งกด Manual มา)
+        container.querySelectorAll('.card').forEach(c => {
+            if(!c.dataset.docid && !c.dataset.editing) c.remove();
+        });
+
         window.fireMatches.forEach((m, index) => {
             let mNum = m.matchNum || (index + 1);
             highestNum = Math.max(highestNum, mNum);
@@ -285,10 +290,9 @@
             if(!box) { box = createMatchElement(mNum); container.appendChild(box); }
             
             box.dataset.docid = m.id;
-            const status = m.matchStatus || 'saved'; // default old data to saved
+            const status = m.matchStatus || 'saved';
             box.dataset.status = status;
 
-            // Update Appearance
             box.classList.toggle('is-saved', status === 'saved');
             box.classList.toggle('is-live', status === 'live');
             
@@ -297,14 +301,12 @@
             
             if(box.dataset.editing === "true") return;
 
-            // Update Badge
             let badge = box.querySelector('.status-badge');
             if(!badge) { badge = document.createElement('span'); badge.className = 'status-badge'; box.appendChild(badge); }
             badge.className = `status-badge ${status === 'live' ? 'badge-live' : 'badge-saved'}`;
             badge.innerText = status === 'live' ? 'กำลังแข่ง 🎾' : 'บันทึกแล้ว ✅';
             badge.style.display = status === 'draft' ? 'none' : 'block';
 
-            // Update Selects
             const selects = box.querySelectorAll('.p-select'), players = [m.p1a, m.p2a, m.p1b, m.p2b];
             selects.forEach((sel, i) => {
                 if(status !== 'draft') {
@@ -318,7 +320,6 @@
                 applyColorManual(sel, players[i]);
             });
 
-            // Update Buttons
             const btnGroup = box.querySelector('.btn-group');
             btnGroup.dataset.winner = m.winner || "";
             btnGroup.querySelectorAll('.btn-choice').forEach(b => {
@@ -351,8 +352,18 @@
         const cards = Array.from(container.querySelectorAll('.card'));
         cards.sort((a, b) => parseInt(a.dataset.matchnum) - parseInt(b.dataset.matchnum));
         cards.forEach(c => container.appendChild(c));
-        const lastCard = cards[cards.length - 1];
-        if (!lastCard || lastCard.dataset.docid) addNewManualBox();
+        
+        // --- ลบคำสั่ง addNewManualBox() อัตโนมัติออกไปแล้ว ---
+    };
+
+    window.addNewManualBox = () => {
+        const container = document.getElementById('matchContainer');
+        let currentMax = 0; container.querySelectorAll('.card').forEach(c => currentMax = Math.max(currentMax, parseInt(c.dataset.matchnum) || 0));
+        window.globalNextMatchNum = Math.max(window.globalNextMatchNum, currentMax + 1);
+        const box = createMatchElement(window.globalNextMatchNum);
+        container.appendChild(box);
+        box.querySelectorAll('.p-select').forEach(s => window.refreshSelectOptionsManual(s));
+        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
     };
 
     window.createMatchElement = (num) => {
@@ -386,7 +397,7 @@
         box.querySelectorAll('.p-select').forEach(s => window.refreshSelectOptionsManual(s));
     };
 
-    // --- Core UI Helpers (Unchanged) ---
+    // --- Core UI Helpers ---
     window.getDotEmoji = (cls) => { if(!cls) return "⚪"; if(cls.includes('P')) return "🟣"; if(cls.includes('S')) return "🔴"; if(cls.includes('N')) return "🟠"; if(cls.includes('BG')) return "🔵"; return "🟢"; };
     window.getPartnerCount = (p1, p2) => { let count = 0; window.fireMatches.forEach(m => { if((m.p1a===p1 && m.p2a===p2) || (m.p1a===p2 && m.p2a===p1)) count++; if((m.p1b===p1 && m.p2b===p2) || (m.p1b===p2 && m.p2b===p1)) count++; }); return count; };
     window.getTxtClass = (cls) => { if(!cls) return ""; cls = cls.toUpperCase(); if(cls.includes('P')) return "txt-p"; if(cls.includes('S')) return "txt-s"; if(cls.includes('N')) return "txt-n"; if(cls.includes('BG')) return "txt-bg"; return "txt-bb"; };
@@ -420,15 +431,7 @@
 
     window.handleSel = (el) => { const box = el.closest('.card'); box.querySelectorAll('.p-select').forEach(s => window.refreshSelectOptionsManual(s)); };
     window.setWin = (btn, team) => { if(btn.disabled) return; btn.parentElement.querySelectorAll('.btn-choice').forEach(b => b.classList.remove('selected')); btn.classList.add('selected'); btn.parentElement.dataset.winner = team; };
-    window.addNewManualBox = () => {
-        const container = document.getElementById('matchContainer');
-        let currentMax = 0; container.querySelectorAll('.card').forEach(c => currentMax = Math.max(currentMax, parseInt(c.dataset.matchnum) || 0));
-        window.globalNextMatchNum = Math.max(window.globalNextMatchNum, currentMax + 1);
-        const box = createMatchElement(window.globalNextMatchNum);
-        container.appendChild(box);
-        box.querySelectorAll('.p-select').forEach(s => window.refreshSelectOptionsManual(s));
-    };
-
+    
     window.editMember = (id) => {
         const m = window.fireMembers.find(i => i.id === id);
         if(!m) return;
