@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Badminton Hub Pro (V4.2 - Stable)</title>
+    <title>Badminton Hub Pro (V4.3 - Sync Strict)</title>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -28,11 +28,11 @@
         select, input { width: 100%; padding: 12px; margin-bottom: 10px; background: #36393f; border: 1px solid var(--border); color: white; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
         .p-select { margin-bottom: 8px; border-left: 5px solid transparent; }
         .btn-main { width: 100%; padding: 14px; background: var(--accent); color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; }
-        .btn-main:disabled { background: #4f545c; opacity: 0.6; }
+        .btn-main:disabled { background: #4f545c; opacity: 0.6; cursor: not-allowed; }
         .btn-group { display: flex; gap: 10px; margin-bottom: 10px; }
         .btn-choice { flex: 1; padding: 10px; background: #36393f; border: 1px solid var(--border); color: var(--text-dim); border-radius: 8px; cursor: pointer; font-weight: bold; }
         .btn-choice.selected { background: rgba(67, 181, 129, 0.2); border-color: var(--accent); color: var(--accent); }
-        .btn-saved-compact { background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--text-dim); padding: 8px; font-size: 0.75rem; border-radius: 8px; width: 100%; text-align: center; margin-top: 5px; }
+        .btn-saved-compact { background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--accent); padding: 8px; font-size: 0.85rem; border-radius: 8px; width: 100%; text-align: center; margin-top: 5px; font-weight: bold; }
         .btn-edit-link { background: transparent; border: none; color: var(--warning); font-size: 0.75rem; text-decoration: underline; margin-top: 8px; display: none; width: 100%; cursor: pointer; }
         .btn-danger { background: var(--danger); width: 100%; padding: 14px; color: white; border: none; border-radius: 10px; font-weight: bold; margin-bottom: 15px; cursor: pointer; }
         .btn-status { border: none; border-radius: 6px; padding: 6px 4px; font-size: 0.7rem; font-weight: bold; cursor: pointer; width: 100%; }
@@ -48,7 +48,7 @@
         .nav-item { flex: 1; text-align: center; color: var(--text-dim); cursor: pointer; font-size: 0.8rem; }
         .nav-item.active { color: var(--accent); font-weight: bold; }
         .m-table { width: 100%; border-collapse: collapse; }
-        .m-table th { color: var(--text-dim); font-size: 0.65rem; padding: 8px 4px; border-bottom: 1px solid var(--border); }
+        .m-table th { color: var(--text-dim); font-size: 0.65rem; padding: 8px 4px; border-bottom: 1px solid var(--border); text-transform: uppercase; }
         .m-table td { padding: 10px 4px; border-bottom: 1px solid #36393f; font-size: 0.9rem; }
     </style>
 </head>
@@ -70,10 +70,13 @@
     <div class="modal-content">
         <div style="padding: 15px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
             <h3 style="margin:0; color:var(--accent);">📊 สถิติเกม</h3>
-            <span style="font-size: 24px; cursor: pointer;" onclick="closeStats()">&times;</span>
+            <span style="font-size: 24px; cursor: pointer; color: var(--text-dim);" onclick="closeStats()">&times;</span>
         </div>
         <div style="overflow-y: auto; padding: 10px;">
-            <table class="m-table"><thead id="statsHead"></thead><tbody id="miniStatsTableBody"></tbody></table>
+            <table class="m-table">
+                <thead><tr><th style="text-align:left;">ชื่อ</th><th>คลาส</th><th>เกม</th><th>Win%</th></tr></thead>
+                <tbody id="miniStatsTableBody"></tbody>
+            </table>
         </div>
         <div style="padding: 10px;"><button class="btn-main" onclick="closeStats()">ปิด</button></div>
     </div>
@@ -95,10 +98,9 @@
 </div>
 
 <div id="page2" class="page">
-    <div class="page-header"><h2>🏸 จดผล</h2><button onclick="openStats()" style="background:#5865f2; color:white; border:none; border-radius:6px; padding:6px 12px; font-size:0.8rem;">📊 สถิติ</button></div>
+    <div class="page-header"><h2>🏸 จดผล</h2><button onclick="openStats()" style="background:#5865f2; color:white; border:none; border-radius:6px; padding:6px 12px; font-size:0.8rem; font-weight:bold; cursor:pointer;">📊 สถิติ</button></div>
     <div class="container">
         <div id="matchContainer"></div>
-        <button class="btn-main" style="background:transparent; border:2px dashed var(--border); color:var(--text-dim);" onclick="addNewMatchBox(true)">+ เพิ่มเกมใหม่</button>
     </div>
 </div>
 
@@ -143,17 +145,20 @@
     window.fireMembers = [];
     window.fireMatches = [];
 
-    // ดึงข้อมูลสมาชิก
+    // ดึงสมาชิก
     onSnapshot(collection(db, "members"), (snapshot) => {
         window.fireMembers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         calculateStats();
     });
 
-    // ดึงข้อมูลแมตช์
+    // ดึงแมตช์
     onSnapshot(query(collection(db, "matches"), orderBy("timestamp", "asc")), (snapshot) => {
         window.fireMatches = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         calculateStats();
-        renderMatchHistory();
+        // ถ้าอยู่หน้าจดผล ให้อัปเดต UI ทันที
+        if(document.getElementById('page2').classList.contains('active')) {
+            renderMatchHistoryStrict();
+        }
     });
 
     function calculateStats() {
@@ -172,7 +177,7 @@
     window.registerMember = async function() {
         const n = document.getElementById('mem_name'), c = document.getElementById('mem_class'), nt = document.getElementById('mem_note');
         if(!n.value.trim()) return;
-        if(window.fireMembers.some(m => m.name === n.value.trim())) return alert("ชื่อซ้ำ!");
+        if(window.fireMembers.some(m => m.name.toLowerCase() === n.value.trim().toLowerCase())) return alert("ชื่อซ้ำ!");
         await addDoc(collection(db, "members"), { name: n.value.trim(), class: c.value, note: nt.value, status: "Active" });
         n.value = ""; nt.value = "";
     };
@@ -182,22 +187,37 @@
         if(m) await updateDoc(doc(db, "members", m.id), { status: action === "checkout" ? "Inactive" : "Active" });
     };
 
-    window.saveMatchBox = async function(tempId) {
-        const box = document.getElementById(`match-box-${tempId}`);
+    window.saveMatchBox = async function(num) {
+        const box = document.getElementById(`match-box-${num}`);
         const btn = box.querySelector('.btn-main');
         const winner = box.querySelector('.btn-group').dataset.winner;
         const players = Array.from(box.querySelectorAll('.p-select')).map(s => s.value);
-        if(players.includes("") || !winner) return alert("กรอกข้อมูลให้ครบ!");
         
-        btn.disabled = true; btn.innerText = "กำลังบันทึก...";
+        if(players.includes("") || !winner) return alert("กรุณากรอกข้อมูลให้ครบและเลือกทีมชนะครับ!");
+        
+        // ล็อคปุ่มกันการกดเบิ้ล
+        btn.disabled = true; 
+        btn.innerText = "กำลังบันทึก...";
+        
+        // ปลดสถานะการ Edit เพื่อให้ onSnapshot สามารถเขียนทับและล็อคกล่องได้
+        delete box.dataset.editing;
+
         const data = { p1a: players[0], p2a: players[1], p1b: players[2], p2b: players[3], winner, timestamp: serverTimestamp() };
         
         try {
-            if(box.dataset.docid) await updateDoc(doc(db, "matches", box.dataset.docid), data);
-            else await addDoc(collection(db, "matches"), data);
-            // เมื่อ Firebase Snapshot ทำงาน renderMatchHistory จะเปลี่ยนปุ่มเป็น "บันทึกแล้ว" เอง
+            if(box.dataset.docid) {
+                // อัปเดตข้อมูลเก่า
+                await updateDoc(doc(db, "matches", box.dataset.docid), data);
+            } else {
+                // สร้างข้อมูลใหม่
+                await addDoc(collection(db, "matches"), data);
+            }
+            // ไม่ต้องทำอะไรต่อ Firebase onSnapshot จะดึงข้อมูลและเรียก renderMatchHistoryStrict() อัตโนมัติ
         } catch(e) { 
-            alert("Error!"); btn.disabled = false; btn.innerText = "บันทึกผล"; 
+            console.error(e);
+            alert("เกิดข้อผิดพลาดในการบันทึก!"); 
+            btn.disabled = false; 
+            btn.innerText = box.dataset.docid ? "อัปเดตผล" : "บันทึกผล"; 
         }
     };
 
@@ -261,58 +281,90 @@
         sorted.forEach(m => {
             const isActive = m.Status === "Active";
             const wr = m.TotalPlayed > 0 ? Math.round((m.Win/m.TotalPlayed)*100) : 0;
-            html += `<tr><td><span class="status-dot ${isActive?'dot-active':'dot-off'}"></span><b>${m.Name}</b></td><td class="${getTxtClass(m.Class)}">${m.Class}</td><td style="text-align:center">${m.TotalPlayed}</td><td style="text-align:center">${wr}%</td><td><button class="btn-status ${isActive?'btn-out':'btn-in'}" onclick="quickStatusUpdate('${m.Name}','${isActive?'checkout':'undo'}')">${isActive?'ออก':'เข้า'}</button></td></tr>`;
+            html += `<tr><td><span class="status-dot ${isActive?'dot-active':'dot-off'}"></span><b>${m.Name}</b></td><td class="${getTxtClass(m.Class)}">${m.Class}</td><td style="text-align:center; font-weight:bold;">${m.TotalPlayed}</td><td style="text-align:center">${wr}%</td><td><button class="btn-status ${isActive?'btn-out':'btn-in'}" onclick="quickStatusUpdate('${m.Name}','${isActive?'checkout':'undo'}')">${isActive?'ออก':'เข้า'}</button></td></tr>`;
         });
         tbody.innerHTML = html;
     };
 
-    function renderMatchHistory() {
+    // ตัวแปรสำคัญสำหรับคุมการวาด
+    window.renderMatchHistoryStrict = () => {
         const container = document.getElementById('matchContainer');
-        window.fireMatches.forEach((m, idx) => {
-            let box = container.querySelector(`[data-docid="${m.id}"]`);
+        const matches = window.fireMatches;
+
+        // 1. อัปเดตกล่องที่บันทึกแล้ว (ตามลำดับ Database จริง 100%)
+        matches.forEach((m, index) => {
+            const matchNum = index + 1;
+            let box = document.getElementById(`match-box-${matchNum}`);
+            
+            // ถ้าไม่มีกล่องเลขนี้ ให้สร้างขึ้นมา
             if(!box) {
-                box = createMatchElement(idx + 1);
-                box.dataset.docid = m.id;
+                box = createMatchElement(matchNum);
                 container.appendChild(box);
             }
-            // อัปเดตข้อมูลในช่องที่บันทึกแล้ว
+            
+            box.dataset.docid = m.id;
+
+            // ถ้ากำลัง Edit อยู่ ไม่ต้องเอาข้อมูล Database มาทับหน้าจอ
+            if(box.dataset.editing === "true") return;
+
+            // ใส่ข้อมูลลง Dropdown และล็อค
             const selects = box.querySelectorAll('.p-select');
-            [m.p1a, m.p2a, m.p1b, m.p2b].forEach((name, i) => {
-                if(selects[i].value !== name) {
-                    selects[i].innerHTML = `<option value="${name}">${name}</option>`;
-                    selects[i].value = name;
+            const players = [m.p1a, m.p2a, m.p1b, m.p2b];
+            selects.forEach((sel, i) => {
+                if(sel.value !== players[i]) {
+                    sel.innerHTML = `<option value="${players[i]}">${players[i]}</option>`;
+                    sel.value = players[i];
+                    window.applyColor(sel);
                 }
+                sel.disabled = true;
             });
+
+            // อัปเดตปุ่มทีมชนะ
             const btnGroup = box.querySelector('.btn-group');
             btnGroup.dataset.winner = m.winner;
             btnGroup.querySelectorAll('.btn-choice').forEach(b => {
                 b.classList.toggle('selected', (m.winner==='Team A' && b.innerText==='A ชนะ') || (m.winner==='Team B' && b.innerText==='B ชนะ'));
                 b.disabled = true;
             });
-            const mainBtn = box.querySelector('.btn-main');
-            if(mainBtn) mainBtn.outerHTML = `<div class="btn-saved-compact">✓ บันทึกแล้ว</div>`;
-            box.querySelector('.btn-edit-link').style.display = 'block';
-            box.querySelectorAll('select').forEach(s => s.disabled = true);
-        });
-        // เพิ่มกล่องว่างถ้ากล่องสุดท้ายถูกบันทึกไปแล้ว
-        const lastBox = container.lastElementChild;
-        if(!lastBox || lastBox.dataset.docid) addNewMatchBox();
-    }
 
-    window.createMatchElement = (num) => {
-        const div = document.createElement('div'); div.className = 'card'; div.id = `match-box-temp-${num}`;
-        div.innerHTML = `<div class="game-label">เกมที่ ${num}</div><div class="match-grid"><div><select class="p-select" data-role="p1a" onchange="handleSel(this)"></select><select class="p-select" data-role="p2a" onchange="handleSel(this)"></select></div><div class="vs-text">VS</div><div><select class="p-select" data-role="p1b" onchange="handleSel(this)"></select><select class="p-select" data-role="p2b" onchange="handleSel(this)"></select></div></div><div class="btn-group"><button class="btn-choice" onclick="setWin(this,'Team A')">A ชนะ</button><button class="btn-choice" onclick="setWin(this,'Team B')">B ชนะ</button></div><button class="btn-main" onclick="saveMatchBox('temp-${num}')">บันทึกผล</button><button class="btn-edit-link" onclick="editMatch(${num})">แก้ไข</button>`;
-        return div;
+            // เปลี่ยนปุ่มบันทึก เป็น "บันทึกแล้ว"
+            const mainBtn = box.querySelector('.btn-main');
+            if(mainBtn) {
+                const savedDiv = document.createElement('div');
+                savedDiv.className = 'btn-saved-compact';
+                savedDiv.innerText = '✓ บันทึกผลแล้ว';
+                mainBtn.replaceWith(savedDiv);
+            }
+
+            // แสดงลิงก์แก้ไข
+            box.querySelector('.btn-edit-link').style.display = 'block';
+        });
+
+        // 2. สร้างกล่องเปล่าสำหรับแมตช์ถัดไป (แค่ 1 กล่องเท่านั้น)
+        const nextMatchNum = matches.length + 1;
+        let emptyBox = document.getElementById(`match-box-${nextMatchNum}`);
+        if(!emptyBox) {
+            emptyBox = createMatchElement(nextMatchNum);
+            container.appendChild(emptyBox);
+            emptyBox.querySelectorAll('.p-select').forEach(s => window.refreshSelectOptions(s));
+        }
+
+        // 3. กำจัดกล่องผี (ถ้ามีกล่องที่เลขเกินกว่าที่ควรมี ให้ลบทิ้ง)
+        Array.from(container.children).forEach(child => {
+            const idMatch = child.id.match(/match-box-(\d+)/);
+            if(idMatch) {
+                const num = parseInt(idMatch[1]);
+                if(num > nextMatchNum) {
+                    child.remove();
+                }
+            }
+        });
     };
 
-    window.addNewMatchBox = (scroll) => {
-        const container = document.getElementById('matchContainer');
-        const num = container.children.length + 1;
-        if(container.querySelector(`#match-box-temp-${num}`)) return;
-        const box = createMatchElement(num);
-        container.appendChild(box);
-        box.querySelectorAll('.p-select').forEach(s => window.refreshSelectOptions(s));
-        if(scroll) window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+    window.createMatchElement = (num) => {
+        const div = document.createElement('div'); div.className = 'card'; div.id = `match-box-${num}`;
+        div.innerHTML = `<div class="game-label">เกมที่ ${num}</div><div class="match-grid"><div><select class="p-select" data-role="p1a" onchange="handleSel(this)"></select><select class="p-select" data-role="p2a" onchange="handleSel(this)"></select></div><div class="vs-text">VS</div><div><select class="p-select" data-role="p1b" onchange="handleSel(this)"></select><select class="p-select" data-role="p2b" onchange="handleSel(this)"></select></div></div><div class="btn-group"><button class="btn-choice" onclick="setWin(this,'Team A')">A ชนะ</button><button class="btn-choice" onclick="setWin(this,'Team B')">B ชนะ</button></div><button class="btn-main" onclick="saveMatchBox(${num})">บันทึกผล</button><button class="btn-edit-link" onclick="editMatch(${num})">แก้ไขข้อมูล</button>`;
+        return div;
     };
 
     window.handleSel = (el) => {
@@ -321,12 +373,14 @@
     };
 
     window.setWin = (btn, team) => {
+        if(btn.disabled) return;
         btn.parentElement.querySelectorAll('.btn-choice').forEach(b => b.classList.remove('selected'));
         btn.classList.add('selected'); btn.parentElement.dataset.winner = team;
     };
 
     window.applyColor = (el) => {
-        const color = getTxtClass(el.value ? (window.allDataMemory.find(m=>m.Name===el.value)||{}).Class : "");
+        const clsMatch = el.options[el.selectedIndex]?.text.match(/\[(.*?)\]/);
+        const color = getTxtClass(clsMatch ? clsMatch[1] : el.value);
         el.style.borderLeftColor = color ? getComputedStyle(document.documentElement).getPropertyValue('--cls-'+color.split('-')[1]) : 'transparent';
     };
 
@@ -340,7 +394,10 @@
     window.showPage = (n) => {
         document.querySelectorAll('.page').forEach((p,i) => p.classList.toggle('active', i+1===n));
         document.querySelectorAll('.nav-item').forEach((p,i) => p.classList.toggle('active', i+1===n));
-        if(n===2) setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 100);
+        if(n===2) {
+            renderMatchHistoryStrict();
+            setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 100);
+        }
     };
 
     window.updateDash = () => {
@@ -354,21 +411,23 @@
         let html = "";
         [...window.allDataMemory].sort((a,b)=>b.TotalPlayed-a.TotalPlayed).forEach(m => {
             const wr = m.TotalPlayed > 0 ? Math.round((m.Win/m.TotalPlayed)*100) : 0;
-            html += `<tr><td><b>${m.Name}</b></td><td class="${getTxtClass(m.Class)}">${m.Class}</td><td style="text-align:center">${m.TotalPlayed}</td><td style="text-align:center">${wr}%</td></tr>`;
+            html += `<tr><td><b>${m.Name}</b></td><td class="${getTxtClass(m.Class)}">${m.Class}</td><td style="text-align:center; font-weight:bold;">${m.TotalPlayed}</td><td style="text-align:center">${wr}%</td></tr>`;
         });
         document.getElementById('miniStatsTableBody').innerHTML = html;
     };
     window.closeStats = () => document.getElementById('statsModal').style.display="none";
-    window.openDeleteModal = (t) => { window.deleteTarget=t; document.getElementById('deleteModal').style.display="flex"; };
+    window.openDeleteModal = (t) => { window.deleteTarget=t; document.getElementById('deleteConfirmInput').value=""; document.getElementById('btnConfirmDelete').disabled=true; document.getElementById('deleteModal').style.display="flex"; };
     window.closeDeleteModal = () => document.getElementById('deleteModal').style.display="none";
     window.checkDeleteInput = () => document.getElementById('btnConfirmDelete').disabled = document.getElementById('deleteConfirmInput').value!=="delete";
-    window.editMatch = (n) => {
-        const box = document.getElementById(`match-box-temp-${n}`);
+    
+    window.editMatch = (num) => {
+        const box = document.getElementById(`match-box-${num}`);
+        box.dataset.editing = "true"; // มาร์คไว้ว่ากำลังแก้ จะได้ไม่โดน Snapshot ทับ
         box.querySelectorAll('select, .btn-choice').forEach(el => el.disabled = false);
         const saved = box.querySelector('.btn-saved-compact');
         if(saved) {
-            const btn = document.createElement('button'); btn.className='btn-main'; btn.innerText='อัปเดต';
-            btn.onclick = () => saveMatchBox(`temp-${n}`);
+            const btn = document.createElement('button'); btn.className='btn-main'; btn.innerText='อัปเดตผล';
+            btn.onclick = () => saveMatchBox(num);
             saved.replaceWith(btn);
         }
         box.querySelectorAll('.p-select').forEach(s => window.refreshSelectOptions(s));
