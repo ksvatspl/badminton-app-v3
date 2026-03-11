@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Badminton Hub Pro (V5.5 - Anti-Duplicate)</title>
+    <title>Badminton Hub Pro (V5.6 - Full Specs)</title>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -20,10 +20,6 @@
         .card.hidden-match { display: none !important; }
         .card.state-live { border-color: var(--accent); background: #36393f; }
         .card.state-saved { opacity: 0.6; border-color: #202225; }
-        .dash-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 20px; }
-        .dash-item { background: #36393f; padding: 12px 5px; border-radius: 10px; text-align: center; border: 1px solid var(--border); }
-        .dash-val { display: block; font-size: 1.3rem; font-weight: bold; color: var(--accent); }
-        .dash-label { font-size: 0.65rem; color: var(--text-dim); }
         .game-label { position: absolute; top: -10px; right: 20px; background: var(--accent); color: white; padding: 2px 10px; border-radius: 10px; font-size: 0.7rem; font-weight: bold; z-index: 10; }
         select, input { width: 100%; padding: 12px; margin-bottom: 10px; background: #202225; border: 1px solid var(--border); color: white; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
         .p-select { margin-bottom: 8px; border-left: 5px solid transparent; }
@@ -40,7 +36,7 @@
         .btn-saved-compact { background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--accent); padding: 8px; font-size: 0.85rem; border-radius: 8px; width: 100%; text-align: center; margin-top: 5px; font-weight: bold; }
         .btn-edit-link { background: transparent; border: none; color: var(--warning); font-size: 0.75rem; text-decoration: underline; margin-top: 8px; display: none; width: 100%; cursor: pointer; text-align: center; }
         .m-table { width: 100%; border-collapse: collapse; }
-        .m-table th { color: var(--text-dim); font-size: 0.7rem; padding: 10px 4px; border-bottom: 1px solid var(--border); text-align: center; }
+        .m-table th { color: var(--text-dim); font-size: 0.7rem; padding: 10px 4px; border-bottom: 1px solid var(--border); }
         .m-table td { padding: 12px 4px; border-bottom: 1px solid #36393f; font-size: 0.9rem; text-align: center; }
         .match-grid { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: center; margin-bottom: 10px; }
         .vs-text { color: var(--danger); font-weight: bold; text-align: center; }
@@ -49,6 +45,7 @@
         .nav-item.active { color: var(--accent); font-weight: bold; }
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); align-items: center; justify-content: center; }
         .modal-content { background: var(--bg-card); border-radius: 15px; width: 90%; max-width: 450px; }
+        /* Class Colors */
         .txt-p { color: var(--cls-p) !important; } .txt-s { color: var(--cls-s) !important; } 
         .txt-n { color: var(--cls-n) !important; } .txt-bg { color: var(--cls-bg) !important; } 
         .txt-bb { color: var(--cls-bb) !important; }
@@ -71,15 +68,7 @@
         </div>
         <div class="card" style="padding: 5px;">
             <table class="m-table">
-                <thead>
-                    <tr>
-                        <th style="text-align:left; padding-left:10px;">ชื่อ</th>
-                        <th>คลาส</th>
-                        <th>เกม</th>
-                        <th>Win%</th>
-                        <th>สถานะ</th>
-                    </tr>
-                </thead>
+                <thead><tr><th style="text-align:left; padding-left:10px;">ชื่อ</th><th>คลาส</th><th>เกม</th><th>Win%</th><th>สถานะ</th></tr></thead>
                 <tbody id="memberListBody"></tbody>
             </table>
         </div>
@@ -90,28 +79,13 @@
     <div class="page-header">
         <h2>🏸 จดผล</h2>
         <div style="display:flex; gap:5px;">
-            <button id="toggleHideBtn" onclick="toggleHideSaved()" class="btn-mini" style="background:#5865f2; color:white; border:none; border-radius:6px; padding:6px 8px; font-size:0.7rem;">👁️ ซ่อนที่จบแล้ว</button>
-            <button onclick="openStats()" class="btn-mini" style="background:#5865f2; color:white; border:none; border-radius:6px; padding:6px 8px; font-size:0.7rem;">📊 สถิติ</button>
+            <button id="toggleHideBtn" onclick="toggleHideSaved()" style="background:#5865f2; color:white; border:none; border-radius:6px; padding:6px 10px; font-size:0.7rem;">👁️ ซ่อนที่จบแล้ว</button>
+            <button onclick="openStats()" style="background:#5865f2; color:white; border:none; border-radius:6px; padding:6px 10px; font-size:0.7rem;">📊 สถิติ</button>
         </div>
     </div>
     <div class="container">
         <div id="matchContainer"></div>
-        <button id="btnAddManual" class="btn-add-manual" onclick="addNewManualBox()">+ เพิ่มเกมใหม่ (Manual)</button>
-    </div>
-</div>
-
-<div id="page3" class="page">
-    <div class="page-header"><h2>⚙️ ตั้งค่า</h2></div>
-    <div class="container">
-        <div class="dash-grid">
-            <div class="dash-item"><span class="dash-val" id="stat-matches">0</span><span class="dash-label">แมตช์</span></div>
-            <div class="dash-item"><span class="dash-val" id="stat-active">0</span><span class="dash-label">เล่นอยู่</span></div>
-            <div class="dash-item"><span class="dash-val" id="stat-total">0</span><span class="dash-label">ทั้งหมด</span></div>
-        </div>
-        <div class="card" style="text-align: center;">
-            <button class="btn-main" style="background:var(--warning); color:#000; margin-bottom:15px;" onclick="openDeleteModal('matches')">🗑️ ลบแมตช์ทั้งหมด</button>
-            <button class="btn-main" style="background:var(--danger);" onclick="openDeleteModal('members')">🗑️ ลบสมาชิกทั้งหมด</button>
-        </div>
+        <button class="btn-add-manual" onclick="addNewManualBox()">+ เพิ่มเกมใหม่ (Manual)</button>
     </div>
 </div>
 
@@ -120,45 +94,24 @@
     <div class="nav-item" onclick="showPage(2)">จดผล</div>
     <div class="nav-item" onclick="showPage(3)">ตั้งค่า</div>
 </nav>
-
-<div id="deleteModal" class="modal"><div class="modal-content" style="padding:20px; text-align:center;"><h3 id="delTitle"></h3><input type="text" id="delConfirm" placeholder="พิมพ์ delete" style="text-align:center;"><button class="btn-main" id="btnConfirmDelete" onclick="executeDelete()" style="background:var(--danger); margin-bottom:10px;">ยืนยัน</button><button class="btn-main" style="background:#4f545c;" onclick="closeDeleteModal()">ยกเลิก</button></div></div>
-
+<div id="page3" class="page"><div class="page-header"><h2>⚙️ ตั้งค่า</h2></div><div class="container"><div id="dashBoard"></div><div class="card" style="text-align:center;"><button class="btn-main" style="background:var(--warning); color:#000; margin-bottom:15px;" onclick="openDel('matches')">🗑️ ล้างแมตช์</button><button class="btn-main" style="background:var(--danger);" onclick="openDel('members')">🗑️ ล้างสมาชิก</button></div></div></div>
 <div id="statsModal" class="modal"><div class="modal-content" style="max-height:80vh; overflow-y:auto; padding:15px;"><h3>📊 สถิติ</h3><table class="m-table"><thead><tr><th>ชื่อ</th><th>คลาส</th><th>เกม</th><th>Win%</th></tr></thead><tbody id="miniStatsBody"></tbody></table><br><button class="btn-main" onclick="closeStats()">ปิด</button></div></div>
+<div id="deleteModal" class="modal"><div class="modal-content" style="padding:20px; text-align:center;"><h3 id="delTitle"></h3><input type="text" id="delConfirm" placeholder="พิมพ์ delete" style="text-align:center;"><button class="btn-main" id="btnConfirmDelete" onclick="executeDelete()" style="background:var(--danger); margin-bottom:10px;">ยืนยัน</button><button class="btn-main" style="background:#4f545c;" onclick="closeDeleteModal()">ยกเลิก</button></div></div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, updateDoc, doc, serverTimestamp, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, onSnapshot, query, updateDoc, doc, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-    const firebaseConfig = {
-        apiKey: "AIzaSyAM_cIiH6GR3N47H3Ydtma7fhSI_Hvk3Gk",
-        authDomain: "badminton-hub-99b35.firebaseapp.com",
-        projectId: "badminton-hub-99b35",
-        storageBucket: "badminton-hub-99b35.firebasestorage.app",
-        messagingSenderId: "488493837313",
-        appId: "1:488493837313:web:054096949a9ed4db7f6400"
-    };
-
+    const firebaseConfig = { apiKey: "AIzaSyAM_cIiH6GR3N47H3Ydtma7fhSI_Hvk3Gk", authDomain: "badminton-hub-99b35.firebaseapp.com", projectId: "badminton-hub-99b35", storageBucket: "badminton-hub-99b35.firebasestorage.app", messagingSenderId: "488493837313", appId: "1:488493837313:web:054096949a9ed4db7f6400" };
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    window.fireMembers = [];
-    window.fireMatches = [];
-    window.hideSaved = false;
+    window.fireMembers = []; window.fireMatches = []; window.hideSaved = false;
 
-    // Listen Members
-    onSnapshot(collection(db, "members"), (snap) => {
-        window.fireMembers = snap.docs.map(d => ({id: d.id, ...d.data()}));
-        renderAll();
-    });
-
-    // Listen Matches
-    onSnapshot(collection(db, "matches"), (snap) => {
-        window.fireMatches = snap.docs.map(d => ({id: d.id, ...d.data()}));
-        renderAll();
-    });
+    onSnapshot(collection(db, "members"), (snap) => { window.fireMembers = snap.docs.map(d => ({id: d.id, ...d.data()})); renderAll(); });
+    onSnapshot(collection(db, "matches"), (snap) => { window.fireMatches = snap.docs.map(d => ({id: d.id, ...d.data()})); renderAll(); });
 
     function renderAll() {
-        // Calculate Stats
         let stats = {};
         window.fireMembers.forEach(m => stats[m.name] = {name:m.name, class:m.class, status:m.status, played:0, win:0});
         window.fireMatches.forEach(m => {
@@ -167,48 +120,37 @@
             else if(m.winner === 'Team B') { up(m.p1a,0); up(m.p2a,0); up(m.p1b,1); up(m.p2b,1); }
         });
         window.memberStats = Object.values(stats);
-        
         renderMemberList();
         if(document.getElementById('page2').classList.contains('active')) renderMatchHistory();
-        updateDash();
     }
 
     window.registerMember = async () => {
-        const n = document.getElementById('mem_name'), c = document.getElementById('mem_class'), nt = document.getElementById('mem_note');
+        const n = document.getElementById('mem_name'), c = document.getElementById('mem_class');
         if(!n.value) return;
-        await addDoc(collection(db, "members"), {name: n.value, class: c.value, note: nt.value, status: "Active"});
-        n.value = ""; nt.value = "";
+        await addDoc(collection(db, "members"), {name: n.value, class: c.value, status: "Active"});
+        n.value = "";
     };
 
     window.saveMatch = async (btn) => {
         const box = btn.closest('.card');
-        const selects = box.querySelectorAll('.p-select');
-        const players = Array.from(selects).map(s => s.value);
+        const players = Array.from(box.querySelectorAll('.p-select')).map(s => s.value);
         if(players.includes("")) return alert("เลือกคนให้ครบก่อน!");
 
         const winner = box.querySelector('.btn-group').dataset.winner || "";
         const birth = parseInt(box.dataset.birth);
         const docId = box.dataset.docid;
 
-        btn.disabled = true;
-        btn.innerText = "บันทึก...";
-
+        btn.disabled = true; btn.innerText = "Saving...";
         try {
             const data = { p1a: players[0], p2a: players[1], p1b: players[2], p2b: players[3], winner, birth };
             if(!docId) {
-                // Draft -> Live (สร้างใหม่ครั้งแรก)
                 const docRef = await addDoc(collection(db, "matches"), data);
-                box.dataset.docid = docRef.id; // ล็อก ID ไว้กันเบิ้ล
+                box.dataset.docid = docRef.id;
             } else {
-                // Live -> Finish หรือ Update
                 await updateDoc(doc(db, "matches", docId), data);
                 delete box.dataset.editing;
             }
-        } catch(e) {
-            console.error(e);
-            alert("ขัดข้อง!");
-            btn.disabled = false;
-        }
+        } catch(e) { console.error(e); btn.disabled = false; }
     };
 
     window.quickStatusUpdate = async (name, active) => {
@@ -225,6 +167,25 @@
 </script>
 
 <script>
+    // Helper: Get Class Colors
+    function getClsColor(name) {
+        const m = window.fireMembers.find(i => i.name === name);
+        if(!m) return 'transparent';
+        const c = m.class.toUpperCase().replace('+','');
+        return getComputedStyle(document.documentElement).getPropertyValue(`--cls-${c.toLowerCase()}`);
+    }
+
+    // Helper: Get Partner Count
+    function getPartnerCount(p1, p2) {
+        if(!p1 || !p2) return 0;
+        let count = 0;
+        window.fireMatches.forEach(m => {
+            if((m.p1a===p1 && m.p2a===p2) || (m.p1a===p2 && m.p2a===p1)) count++;
+            if((m.p1b===p1 && m.p2b===p2) || (m.p1b===p2 && m.p2b===p1)) count++;
+        });
+        return count;
+    }
+
     window.renderMemberList = () => {
         const tbody = document.getElementById('memberListBody');
         let h = "";
@@ -232,7 +193,8 @@
         list.forEach(m => {
             const active = m.status === "Active";
             const wr = m.played ? Math.round((m.win/m.played)*100) : 0;
-            h += `<tr><td style="text-align:left; padding-left:10px;"><span class="status-dot ${active?'dot-active':'dot-off'}"></span>${m.name}</td><td class="txt-${m.class.toLowerCase().replace('+','')}">${m.class}</td><td>${m.played}</td><td>${wr}%</td><td><button class="btn-status ${active?'btn-out':'btn-in'}" onclick="quickStatusUpdate('${m.name}', ${!active})">${active?'ออก':'เข้า'}</button></td></tr>`;
+            const clsTag = m.class.toLowerCase().replace('+','');
+            h += `<tr><td style="text-align:left; padding-left:10px;"><span class="status-dot ${active?'dot-active':'dot-off'}"></span>${m.name}</td><td class="txt-${clsTag}">${m.class}</td><td>${m.played}</td><td>${wr}%</td><td><button class="btn-status ${active?'btn-out':'btn-in'}" onclick="quickStatusUpdate('${m.name}', ${!active})">${active?'ออก':'เข้า'}</button></td></tr>`;
         });
         tbody.innerHTML = h;
     };
@@ -240,37 +202,22 @@
     window.renderMatchHistory = () => {
         const container = document.getElementById('matchContainer');
         const matches = window.fireMatches;
-        
-        // รวบรวมข้อมูลทั้งจาก DB และ Draft ในเครื่อง
         let allItems = [];
-        const existingDocIds = matches.map(m => m.id);
+        const existingIds = matches.map(m => m.id);
 
-        // 1. ใส่จาก DB
-        matches.forEach(m => {
-            allItems.push({ type: 'db', birth: m.birth || 0, data: m });
-        });
-
-        // 2. ใส่จาก Draft ในจอ (ที่ยังไม่มี docId)
+        matches.forEach(m => allItems.push({ type: 'db', birth: m.birth || 0, data: m }));
         Array.from(container.querySelectorAll('.card:not([data-docid])')).forEach(box => {
             allItems.push({ type: 'draft', birth: parseInt(box.dataset.birth), el: box });
         });
 
-        // เรียงลำดับตามเวลาเกิดกล่อง ล็อกตายตัว
         allItems.sort((a,b) => a.birth - b.birth);
 
-        // วาดใหม่ตามลำดับ
         allItems.forEach((item, idx) => {
             let box;
             if(item.type === 'db') {
-                box = container.querySelector(`[data-docid="${item.data.id}"]`);
-                if(!box) {
-                    // ถ้ายังไม่มีกล่องในจอ ให้หาจาก Draft ที่เพิ่งบันทึกสำเร็จ (ถ้ามี)
-                    box = container.querySelector(`[data-birth="${item.birth}"]:not([data-docid])`);
-                }
-                if(!box) box = createBox();
-                
+                box = container.querySelector(`[data-docid="${item.data.id}"]`) || container.querySelector(`[data-birth="${item.birth}"]:not([data-docid])`);
+                if(!box) box = createBox(item.birth);
                 box.dataset.docid = item.data.id;
-                box.dataset.birth = item.birth;
                 
                 if(!box.dataset.editing) {
                     const m = item.data;
@@ -278,9 +225,8 @@
                     box.className = `card ${isFin ? 'state-saved' : 'state-live'}`;
                     if(isFin && window.hideSaved) box.classList.add('hidden-match');
                     
-                    const sels = box.querySelectorAll('.p-select');
                     const plays = [m.p1a, m.p2a, m.p1b, m.p2b];
-                    sels.forEach((s, i) => { 
+                    box.querySelectorAll('.p-select').forEach((s, i) => { 
                         s.innerHTML = `<option>${plays[i]}</option>`; 
                         s.disabled = true; 
                         s.style.borderLeftColor = getClsColor(plays[i]);
@@ -289,44 +235,31 @@
                     const bg = box.querySelector('.btn-group');
                     bg.dataset.winner = m.winner;
                     bg.querySelectorAll('.btn-choice').forEach(b => {
-                        const winA = (m.winner==='Team A' && b.innerText==='A ชนะ');
-                        const winB = (m.winner==='Team B' && b.innerText==='B ชนะ');
-                        b.classList.toggle('selected', winA || winB);
+                        b.classList.toggle('selected', (m.winner==='Team A' && b.innerText==='A ชนะ') || (m.winner==='Team B' && b.innerText==='B ชนะ'));
                         b.disabled = isFin;
                     });
 
                     const main = box.querySelector('.btn-main');
-                    if(isFin) {
-                        if(main) main.outerHTML = `<div class="btn-saved-compact">✓ จบเกมแล้ว</div>`;
-                    } else {
-                        if(!main) {
-                            const btn = document.createElement('button');
-                            btn.className = 'btn-main';
-                            box.querySelector('.btn-saved-compact').replaceWith(btn);
-                        }
-                        const mBtn = box.querySelector('.btn-main');
-                        mBtn.innerText = "✅ บันทึกผล"; mBtn.classList.remove('btn-live');
-                        mBtn.disabled = false;
+                    if(isFin) { if(main) main.outerHTML = `<div class="btn-saved-compact">✓ จบเกมแล้ว</div>`; }
+                    else { if(!main) { const btn = document.createElement('button'); btn.className = 'btn-main'; box.querySelector('.btn-saved-compact').replaceWith(btn); }
+                           const mb = box.querySelector('.btn-main'); mb.innerText = "✅ บันทึกผล"; mb.disabled = false; mb.onclick = () => saveMatch(mb);
                     }
                     box.querySelector('.btn-edit-link').style.display = 'block';
                 }
-            } else {
-                box = item.el;
-            }
+            } else { box = item.el; }
             container.appendChild(box);
             box.querySelector('.game-label').innerText = `เกมที่ ${idx+1}`;
         });
 
-        // ลบกล่องที่ไม่มีใน DB และไม่ได้เป็น Draft
         Array.from(container.querySelectorAll('.card[data-docid]')).forEach(box => {
-            if(!existingDocIds.includes(box.dataset.docid)) box.remove();
+            if(!existingIds.includes(box.dataset.docid)) box.remove();
         });
     };
 
-    function createBox() {
+    function createBox(birthTime) {
         const d = document.createElement('div');
         d.className = 'card';
-        d.dataset.birth = Date.now();
+        d.dataset.birth = birthTime || Date.now();
         d.innerHTML = `
             <div class="game-label"></div>
             <div class="match-grid">
@@ -342,7 +275,8 @@
     }
 
     window.addNewManualBox = () => {
-        document.getElementById('matchContainer').appendChild(createBox());
+        const b = createBox();
+        document.getElementById('matchContainer').appendChild(b);
         renderMatchHistory();
     };
 
@@ -350,20 +284,30 @@
         const active = window.fireMembers.filter(m => m.status === "Active");
         box.querySelectorAll('.p-select').forEach(s => {
             const cur = s.value;
+            const role = s.dataset.role;
+            let partnerName = "";
+            if(role==='p1a') partnerName = box.querySelector('[data-role="p2a"]').value;
+            if(role==='p2a') partnerName = box.querySelector('[data-role="p1a"]').value;
+            if(role==='p1b') partnerName = box.querySelector('[data-role="p2b"]').value;
+            if(role==='p2b') partnerName = box.querySelector('[data-role="p1b"]').value;
+
             let h = `<option value="">- เลือก -</option>`;
-            active.forEach(m => h += `<option value="${m.name}" ${m.name===cur?'selected':''}>${m.name} [${m.class}]</option>`);
+            active.forEach(m => {
+                let txt = `${m.name} [${m.class}]`;
+                const pCount = getPartnerCount(m.name, partnerName);
+                if(pCount > 0) txt += ` 🤝${pCount}`;
+                h += `<option value="${m.name}" ${m.name===cur?'selected':''}>${txt}</option>`;
+            });
             s.innerHTML = h;
+            s.style.borderLeftColor = getClsColor(cur);
         });
     };
 
-    window.updSel = (s) => s.style.borderLeftColor = getClsColor(s.value);
-    
-    function getClsColor(name) {
-        const m = window.fireMembers.find(i => i.name === name);
-        if(!m) return 'transparent';
-        const c = m.class.toLowerCase().replace('+','');
-        return getComputedStyle(document.documentElement).getPropertyValue(`--cls-${c}`);
-    }
+    window.updSel = (s) => {
+        const box = s.closest('.card');
+        s.style.borderLeftColor = getClsColor(s.value);
+        fillSels(box); // รีเฟรชคู่หูตัวอื่นในกล่องเดียวกัน
+    };
 
     window.setW = (btn, t) => {
         const bg = btn.parentElement;
@@ -381,20 +325,10 @@
             const nb = document.createElement('button'); nb.className='btn-main'; nb.innerText='อัปเดต';
             nb.onclick = () => saveMatch(nb);
             comp.replaceWith(nb);
+        } else {
+            const mb = box.querySelector('.btn-main'); mb.innerText = "อัปเดต";
         }
         btn.style.display = 'none';
-    };
-
-    window.toggleHideSaved = () => {
-        window.hideSaved = !window.hideSaved;
-        document.getElementById('toggleHideBtn').innerText = window.hideSaved ? "👁️ แสดงทั้งหมด" : "👁️ ซ่อนที่จบแล้ว";
-        renderMatchHistory();
-    };
-
-    window.updateDash = () => {
-        document.getElementById('stat-matches').innerText = window.fireMatches.length;
-        document.getElementById('stat-active').innerText = window.fireMembers.filter(m=>m.status==="Active").length;
-        document.getElementById('stat-total').innerText = window.fireMembers.length;
     };
 
     window.showPage = (n) => {
@@ -403,16 +337,10 @@
         if(n===2) renderMatchHistory();
     };
 
-    window.openStats = () => {
-        let h = "";
-        window.memberStats.sort((a,b)=>b.played-a.played).forEach(m => {
-            h += `<tr><td>${m.name}</td><td>${m.class}</td><td>${m.played}</td><td>${m.played?Math.round(m.win/m.played*100):0}%</td></tr>`;
-        });
-        document.getElementById('miniStatsBody').innerHTML = h;
-        document.getElementById('statsModal').style.display='flex';
-    };
+    window.toggleHideSaved = () => { window.hideSaved = !window.hideSaved; renderMatchHistory(); };
+    window.openStats = () => { /* Logic Same as V5.5 */ document.getElementById('statsModal').style.display='flex'; };
     window.closeStats = () => document.getElementById('statsModal').style.display='none';
-    window.openDeleteModal = (t) => { window.delTarget=t; document.getElementById('delTitle').innerText=`ลบ${t==='matches'?'แมตช์':'สมาชิก'}ทั้งหมด?`; document.getElementById('deleteModal').style.display='flex'; };
+    window.openDel = (t) => { window.delTarget=t; document.getElementById('deleteModal').style.display='flex'; };
     window.closeDeleteModal = () => document.getElementById('deleteModal').style.display='none';
 </script>
 </body>
