@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Badminton Hub Pro (V5.7 - Manual Entry Only)</title>
+    <title>Badminton Hub Pro (V5.8 - Stable Draft)</title>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -64,12 +64,7 @@
         .m-table { width: 100%; border-collapse: collapse; }
         .m-table th { color: var(--text-dim); font-size: 0.65rem; padding: 10px 4px; border-bottom: 1px solid var(--border); text-align: center; cursor: pointer; }
         .m-table td { padding: 12px 4px; border-bottom: 1px solid #36393f; font-size: 0.85rem; text-align: center; vertical-align: middle; }
-        .m-table th:first-child, .m-table td:first-child { text-align: left; padding-left: 10px; }
         
-        .mem-info-wrap { display: flex; flex-direction: column; line-height: 1.2; }
-        .mem-note-sub { font-size: 0.7rem; color: #72767d; margin-top: 2px; font-weight: normal; }
-        .edit-text-btn { color: var(--warning); text-decoration: underline; cursor: pointer; font-size: 0.8rem; background: none; border: none; }
-
         .status-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; }
         .dot-active { background: var(--accent); } .dot-off { background: var(--danger); }
 
@@ -93,7 +88,7 @@
             <select id="mem_class">
                 <option value="BB">BB</option><option value="BB+">BB+</option><option value="BG">BG</option><option value="BG+">BG+</option><option value="N">N</option><option value="N+">N+</option><option value="S">S</option><option value="S+">S+</option><option value="P">P</option>
             </select>
-            <input type="text" id="mem_note" placeholder="หมายเหตุ (อยู่ใต้ชื่อ)">
+            <input type="text" id="mem_note" placeholder="หมายเหตุ (เช่น ลำดับทีม)">
             <div id="formActions">
                 <button class="btn-main" onclick="registerMember()">+ เพิ่มสมาชิก</button>
             </div>
@@ -117,7 +112,7 @@
     </div>
     <div class="container">
         <div id="matchContainer"></div>
-        <button id="btnAddManual" class="btn-add-manual" onclick="addNewManualBox()">+ เพิ่มเกมใหม่ (Manual)</button>
+        <button class="btn-add-manual" onclick="addNewManualBox()">+ เพิ่มเกมใหม่ (Manual)</button>
     </div>
 </div>
 
@@ -157,7 +152,7 @@
 <div id="statsModal" class="modal">
     <div class="modal-content">
         <div style="padding: 15px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
-            <h3 style="margin:0; color:var(--accent);">📊 สถิติเกม (ปัจจุบัน)</h3>
+            <h3 style="margin:0; color:var(--accent);">📊 สถิติเกม</h3>
             <span style="font-size: 24px; cursor: pointer; color: var(--text-dim);" onclick="closeStats()">&times;</span>
         </div>
         <div style="overflow-y: auto; padding: 10px;">
@@ -244,10 +239,12 @@
         const winner = box.querySelector('.btn-group').dataset.winner;
         const players = Array.from(box.querySelectorAll('.p-select')).map(s => s.value);
         
-        if(status === 'live' && players.includes("")) return alert("เลือกผู้เล่นให้ครบ 4 คนก่อนลงสนามครับ!");
-        if(status === 'saved' && (!winner || players.includes(""))) return alert("เลือกคนและทีมชนะให้ครบครับ!");
+        if(status === 'live' && players.includes("")) return alert("เลือกผู้เล่นให้ครบ 4 คนก่อน!");
+        if(status === 'saved' && (!winner || players.includes(""))) return alert("ระบุทีมชนะและผู้เล่นให้ครบ!");
 
+        // เมื่อบันทึกแล้ว ให้เอาสถานะ editing/draft ออก
         delete box.dataset.editing;
+        
         const data = { 
             matchNum: parseInt(matchNum), 
             p1a: players[0], p2a: players[1], p1b: players[2], p2b: players[3], 
@@ -273,50 +270,50 @@
 </script>
 
 <script>
-    // --- Manual Only Logic (No Auto-Add) ---
+    // --- Stable Match Logic (Draft Protection) ---
     window.renderMatchHistoryStrict = () => {
         const container = document.getElementById('matchContainer');
         let highestNum = 0;
         
-        // กรอง Card ที่ไม่ได้ถูกแก้ไขอยู่ และไม่มีใน Firebase ออกไป (ยกเว้นใบที่พึ่งกด Manual มา)
+        // 1. ระบุ Card ที่เป็น Draft หรือกำลังแก้ไขอยู่ เพื่อเก็บไว้
+        const localDrafts = Array.from(container.querySelectorAll('.card')).filter(c => 
+            c.dataset.status === 'draft' || c.dataset.editing === "true"
+        );
+
+        // 2. ลบเฉพาะ Card ที่มาจาก DB ออกเพื่อเคลียร์ที่ (ไม่แตะต้อง Draft)
         container.querySelectorAll('.card').forEach(c => {
-            if(!c.dataset.docid && !c.dataset.editing) c.remove();
+            if (c.dataset.status !== 'draft' && c.dataset.editing !== "true") c.remove();
         });
 
-        window.fireMatches.forEach((m, index) => {
-            let mNum = m.matchNum || (index + 1);
+        // 3. วาด Card จาก Firebase
+        window.fireMatches.forEach((m) => {
+            let mNum = m.matchNum;
             highestNum = Math.max(highestNum, mNum);
-            let box = container.querySelector(`.card[data-matchnum="${mNum}"]`);
-            if(!box) { box = createMatchElement(mNum); container.appendChild(box); }
+            
+            // ถ้ามี Draft เลขเดียวกันค้างอยู่ (กรณีพึ่งกดเซฟ) ให้เอา Draft ออกแล้วใช้ข้อมูลจริง
+            let existingDraft = container.querySelector(`.card[data-matchnum="${mNum}"][data-status="draft"]`);
+            if(existingDraft) existingDraft.remove();
+
+            let box = createMatchElement(mNum);
+            container.appendChild(box);
             
             box.dataset.docid = m.id;
             const status = m.matchStatus || 'saved';
             box.dataset.status = status;
-
             box.classList.toggle('is-saved', status === 'saved');
             box.classList.toggle('is-live', status === 'live');
             
-            if(window.hideSavedMatches && status === 'saved' && !box.dataset.editing) box.classList.add('hidden-match');
-            else box.classList.remove('hidden-match');
-            
-            if(box.dataset.editing === "true") return;
+            if(window.hideSavedMatches && status === 'saved') box.classList.add('hidden-match');
 
             let badge = box.querySelector('.status-badge');
             if(!badge) { badge = document.createElement('span'); badge.className = 'status-badge'; box.appendChild(badge); }
             badge.className = `status-badge ${status === 'live' ? 'badge-live' : 'badge-saved'}`;
             badge.innerText = status === 'live' ? 'กำลังแข่ง 🎾' : 'บันทึกแล้ว ✅';
-            badge.style.display = status === 'draft' ? 'none' : 'block';
 
             const selects = box.querySelectorAll('.p-select'), players = [m.p1a, m.p2a, m.p1b, m.p2b];
             selects.forEach((sel, i) => {
-                if(status !== 'draft') {
-                    sel.innerHTML = `<option value="${players[i]}">${players[i] || ''}</option>`;
-                    sel.value = players[i]; sel.disabled = true;
-                } else {
-                    sel.disabled = false;
-                    if(sel.innerHTML === "") window.refreshSelectOptionsManual(sel);
-                    sel.value = players[i] || "";
-                }
+                sel.innerHTML = `<option value="${players[i]}">${players[i] || ''}</option>`;
+                sel.value = players[i]; sel.disabled = true;
                 applyColorManual(sel, players[i]);
             });
 
@@ -325,40 +322,34 @@
             btnGroup.querySelectorAll('.btn-choice').forEach(b => {
                 const isWinner = (m.winner === 'Team A' && b.innerText === 'A ชนะ') || (m.winner === 'Team B' && b.innerText === 'B ชนะ');
                 b.classList.toggle('selected', isWinner);
-                b.disabled = (status === 'saved');
+                b.disabled = true;
             });
 
             const actionBtn = box.querySelector('.btn-main');
-            const savedDiv = box.querySelector('.btn-saved-compact');
-            
             if(status === 'live') {
-                if(savedDiv) savedDiv.remove();
-                actionBtn.style.display = 'block';
                 actionBtn.className = 'btn-main';
                 actionBtn.innerText = '💾 บันทึกผลการแข่ง';
                 actionBtn.onclick = () => saveMatchBox(mNum, 'saved');
-            } else if(status === 'saved') {
+            } else {
                 actionBtn.style.display = 'none';
-                if(!savedDiv) {
-                    const sd = document.createElement('div'); sd.className = 'btn-saved-compact';
-                    sd.innerText = '✓ บันทึกผลแล้ว'; box.insertBefore(sd, box.querySelector('.btn-edit-link'));
-                }
+                const sd = document.createElement('div'); sd.className = 'btn-saved-compact';
+                sd.innerText = '✓ บันทึกผลแล้ว'; box.insertBefore(sd, box.querySelector('.btn-edit-link'));
             }
             box.querySelector('.btn-edit-link').style.display = 'block';
-            box.querySelector('.btn-edit-link').innerText = status === 'live' ? 'แก้ไขผู้เล่น' : 'แก้ไขข้อมูล';
         });
 
-        window.globalNextMatchNum = highestNum + 1;
-        const cards = Array.from(container.querySelectorAll('.card'));
-        cards.sort((a, b) => parseInt(a.dataset.matchnum) - parseInt(b.dataset.matchnum));
-        cards.forEach(c => container.appendChild(c));
-        
-        // --- ลบคำสั่ง addNewManualBox() อัตโนมัติออกไปแล้ว ---
+        // 4. สรุปเลขเกมถัดไป และเรียงลำดับใหม่
+        window.globalNextMatchNum = Math.max(highestNum + 1, window.globalNextMatchNum);
+        const allCards = Array.from(container.querySelectorAll('.card'));
+        allCards.sort((a, b) => parseInt(a.dataset.matchnum) - parseInt(b.dataset.matchnum));
+        allCards.forEach(c => container.appendChild(c));
     };
 
     window.addNewManualBox = () => {
         const container = document.getElementById('matchContainer');
-        let currentMax = 0; container.querySelectorAll('.card').forEach(c => currentMax = Math.max(currentMax, parseInt(c.dataset.matchnum) || 0));
+        let currentMax = 0;
+        container.querySelectorAll('.card').forEach(c => currentMax = Math.max(currentMax, parseInt(c.dataset.matchnum) || 0));
+        
         window.globalNextMatchNum = Math.max(window.globalNextMatchNum, currentMax + 1);
         const box = createMatchElement(window.globalNextMatchNum);
         container.appendChild(box);
@@ -397,11 +388,6 @@
         box.querySelectorAll('.p-select').forEach(s => window.refreshSelectOptionsManual(s));
     };
 
-    // --- Core UI Helpers ---
-    window.getDotEmoji = (cls) => { if(!cls) return "⚪"; if(cls.includes('P')) return "🟣"; if(cls.includes('S')) return "🔴"; if(cls.includes('N')) return "🟠"; if(cls.includes('BG')) return "🔵"; return "🟢"; };
-    window.getPartnerCount = (p1, p2) => { let count = 0; window.fireMatches.forEach(m => { if((m.p1a===p1 && m.p2a===p2) || (m.p1a===p2 && m.p2a===p1)) count++; if((m.p1b===p1 && m.p2b===p2) || (m.p1b===p2 && m.p2b===p1)) count++; }); return count; };
-    window.getTxtClass = (cls) => { if(!cls) return ""; cls = cls.toUpperCase(); if(cls.includes('P')) return "txt-p"; if(cls.includes('S')) return "txt-s"; if(cls.includes('N')) return "txt-n"; if(cls.includes('BG')) return "txt-bg"; return "txt-bb"; };
-    
     window.refreshSelectOptionsManual = (selectEl) => {
         const curVal = selectEl.value, box = selectEl.closest('.card'), role = selectEl.dataset.role;
         const allSelected = Array.from(box.querySelectorAll('.p-select')).map(s => s.value).filter(v => v !== "" && v !== curVal);
@@ -410,6 +396,7 @@
         if(role==='p2a') partnerVal = box.querySelector('[data-role="p1a"]').value;
         if(role==='p1b') partnerVal = box.querySelector('[data-role="p2b"]').value;
         if(role==='p2b') partnerVal = box.querySelector('[data-role="p1b"]').value;
+
         selectEl.innerHTML = '<option value="">- เลือก -</option>';
         window.allDataMemory.filter(m => m.Status === "Active").forEach(m => {
             if(allSelected.includes(m.Name)) return;
@@ -424,14 +411,25 @@
         applyColorManual(selectEl, curVal);
     };
 
-    window.applyColorManual = (el, name) => {
-        const m = window.allDataMemory.find(i => i.Name === name);
-        el.style.borderLeftColor = m ? getComputedStyle(document.documentElement).getPropertyValue('--cls-'+getTxtClass(m.Class).split('-')[1]) : 'transparent';
-    };
-
+    window.getDotEmoji = (cls) => { if(!cls) return "⚪"; if(cls.includes('P')) return "🟣"; if(cls.includes('S')) return "🔴"; if(cls.includes('N')) return "🟠"; if(cls.includes('BG')) return "🔵"; return "🟢"; };
+    window.getPartnerCount = (p1, p2) => { let count = 0; window.fireMatches.forEach(m => { if((m.p1a===p1 && m.p2a===p2) || (m.p1a===p2 && m.p2a===p1)) count++; if((m.p1b===p1 && m.p2b===p2) || (m.p1b===p2 && m.p2b===p1)) count++; }); return count; };
+    window.getTxtClass = (cls) => { if(!cls) return ""; cls = cls.toUpperCase(); if(cls.includes('P')) return "txt-p"; if(cls.includes('S')) return "txt-s"; if(cls.includes('N')) return "txt-n"; if(cls.includes('BG')) return "txt-bg"; return "txt-bb"; };
+    window.applyColorManual = (el, name) => { const m = window.allDataMemory.find(i => i.Name === name); el.style.borderLeftColor = m ? getComputedStyle(document.documentElement).getPropertyValue('--cls-'+getTxtClass(m.Class).split('-')[1]) : 'transparent'; };
     window.handleSel = (el) => { const box = el.closest('.card'); box.querySelectorAll('.p-select').forEach(s => window.refreshSelectOptionsManual(s)); };
     window.setWin = (btn, team) => { if(btn.disabled) return; btn.parentElement.querySelectorAll('.btn-choice').forEach(b => b.classList.remove('selected')); btn.classList.add('selected'); btn.parentElement.dataset.winner = team; };
     
+    window.renderMemberList = () => {
+        const head = document.getElementById('memberListHead'), body = document.getElementById('memberListBody');
+        const arrow = window.currentSort.direction === 'asc' ? '↑' : '↓';
+        head.innerHTML = `<tr><th onclick="setSort('Name')">ชื่อ/คลาส ${window.currentSort.key==='Name'?arrow:''}</th><th onclick="setSort('TotalPlayed')">เกม ${window.currentSort.key==='TotalPlayed'?arrow:''}</th><th onclick="setSort('WinRate')">Win% ${window.currentSort.key==='WinRate'?arrow:''}</th><th>แก้ไข</th><th>เข้า/ออก</th></tr>`;
+        let html = "";
+        window.getSortedData(false).forEach(m => {
+            const isActive = m.Status === "Active";
+            html += `<tr><td><div style="display:flex; flex-direction:column; line-height:1.2; text-align:left; padding-left:10px;"><span><span class="status-dot ${isActive?'dot-active':'dot-off'}"></span><b>${m.Name}</b> <small class="${getTxtClass(m.Class)}">[${m.Class}]</small></span><span style="font-size:0.7rem; color:#72767d;">${m.Note}</span></div></td><td><b>${m.TotalPlayed}</b></td><td>${m.WinRate}%</td><td><button class="edit-text-btn" style="color:var(--warning); background:none; border:none; text-decoration:underline;" onclick="editMember('${m.id}')">แก้ไข</button></td><td style="width:65px;"><button class="btn-status ${isActive?'btn-out':'btn-in'}" onclick="quickStatusUpdate('${m.Name}','${isActive?'checkout':'undo'}')">${isActive?'ออก':'เข้า'}</button></td></tr>`;
+        });
+        body.innerHTML = html;
+    };
+
     window.editMember = (id) => {
         const m = window.fireMembers.find(i => i.id === id);
         if(!m) return;
@@ -448,18 +446,6 @@
         document.getElementById('mem_name').value = "";
         document.getElementById('mem_note').value = "";
         document.getElementById('formActions').innerHTML = `<button class="btn-main" onclick="registerMember()">+ เพิ่มสมาชิก</button>`;
-    };
-
-    window.renderMemberList = () => {
-        const head = document.getElementById('memberListHead'), body = document.getElementById('memberListBody');
-        const arrow = window.currentSort.direction === 'asc' ? '↑' : '↓';
-        head.innerHTML = `<tr><th onclick="setSort('Name')">ชื่อ/คลาส ${window.currentSort.key==='Name'?arrow:''}</th><th onclick="setSort('TotalPlayed')">เกม ${window.currentSort.key==='TotalPlayed'?arrow:''}</th><th onclick="setSort('WinRate')">Win% ${window.currentSort.key==='WinRate'?arrow:''}</th><th>แก้ไข</th><th>สถานะ</th></tr>`;
-        let html = "";
-        window.getSortedData(false).forEach(m => {
-            const isActive = m.Status === "Active";
-            html += `<tr><td><div class="mem-info-wrap"><span><span class="status-dot ${isActive?'dot-active':'dot-off'}"></span><b>${m.Name}</b> <small class="${getTxtClass(m.Class)}">[${m.Class}]</small></span><span class="mem-note-sub">${m.Note}</span></div></td><td><b>${m.TotalPlayed}</b></td><td>${m.WinRate}%</td><td><button class="edit-text-btn" onclick="editMember('${m.id}')">แก้ไข</button></td><td style="width:65px;"><button class="btn-status ${isActive?'btn-out':'btn-in'}" onclick="quickStatusUpdate('${m.Name}','${isActive?'checkout':'undo'}')">${isActive?'ออก':'เข้า'}</button></td></tr>`;
-        });
-        body.innerHTML = html;
     };
 
     window.setSort = (key, fromModal = false) => {
