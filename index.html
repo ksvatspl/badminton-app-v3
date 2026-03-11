@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Badminton Hub Pro (V4.0 - Smart Matcher)</title>
+    <title>Badminton Hub Pro (V4.1 - UX Refined)</title>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -24,7 +24,6 @@
         .card { background: var(--bg-card); border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); position: relative; }
         .game-label { position: absolute; top: -10px; right: 20px; background: var(--accent); color: white; padding: 2px 10px; border-radius: 10px; font-size: 0.7rem; font-weight: bold; }
         
-        /* Dashboard */
         .dash-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 20px; }
         .dash-item { background: #36393f; padding: 12px 5px; border-radius: 10px; text-align: center; border: 1px solid var(--border); }
         .dash-val { display: block; font-size: 1.3rem; font-weight: bold; color: var(--accent); }
@@ -40,7 +39,6 @@
         .btn-main { width: 100%; padding: 14px; background: var(--accent); color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; }
         .btn-main:disabled { background: #4f545c; cursor: not-allowed; opacity: 0.6; }
         
-        /* Match Buttons */
         .btn-group { display: flex; gap: 10px; margin-bottom: 10px; }
         .btn-choice { flex: 1; padding: 10px; background: #36393f; border: 1px solid var(--border); color: var(--text-dim); border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.9rem; }
         .btn-choice.selected { background: rgba(67, 181, 129, 0.2); border-color: var(--accent); color: var(--accent); }
@@ -50,7 +48,6 @@
         .btn-edit-link { background: transparent; border: none; color: var(--warning); font-size: 0.75rem; text-decoration: underline; cursor: pointer; width: 100%; margin-top: 8px; display: none; }
 
         .btn-mini { background: #5865f2; color: white; border: none; border-radius: 6px; padding: 6px 12px; font-size: 0.8rem; cursor: pointer; }
-
         .btn-danger { background: var(--danger); width: 100%; padding: 14px; color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; margin-bottom: 15px; }
         
         .btn-status { border: none; border-radius: 6px; padding: 6px 4px; font-size: 0.7rem; font-weight: bold; cursor: pointer; width: 100%; }
@@ -64,7 +61,6 @@
         .dot-active { background: var(--accent); box-shadow: 0 0 5px var(--accent); }
         .dot-off { background: var(--danger); }
 
-        /* Modals */
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); align-items: center; justify-content: center; }
         .modal-content { background: var(--bg-card); border-radius: 15px; width: 90%; max-width: 450px; max-height: 85vh; overflow: hidden; display: flex; flex-direction: column; }
         .modal-header { padding: 15px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
@@ -75,7 +71,6 @@
         .nav-item { flex: 1; text-align: center; color: var(--text-dim); cursor: pointer; font-size: 0.8rem; }
         .nav-item.active { color: var(--accent); font-weight: bold; }
         
-        /* Table Styles */
         .m-table { width: 100%; border-collapse: collapse; }
         .m-table th { color: var(--text-dim); font-size: 0.65rem; text-transform: uppercase; padding: 8px 4px; border-bottom: 1px solid var(--border); }
         .m-table td { padding: 10px 4px; border-bottom: 1px solid #36393f; font-size: 0.9rem; }
@@ -210,7 +205,6 @@
 
     onSnapshot(query(collection(db, "matches"), orderBy("timestamp", "asc")), (snapshot) => {
         fireMatches = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        window.isHistoryLoaded = false;
         processData();
     });
 
@@ -249,10 +243,11 @@
         const winner = box.querySelector('.btn-group').dataset.winner;
         const players = Array.from(box.querySelectorAll('.p-select')).map(s => s.value).filter(v => v !== "");
         if (players.length < 4 || !winner) return alert("กรุณากรอกข้อมูลให้ครบครับ");
-        if(new Set(players).size !== players.length) return alert("เลือกชื่อคนเดิมซ้ำไม่ได้ครับ!");
+        
         const data = { p1a: players[0], p2a: players[1], p1b: players[2], p2b: players[3], winner };
         if(box.dataset.docid) await updateDoc(doc(db, "matches", box.dataset.docid), data);
         else await addDoc(collection(db, "matches"), { ...data, timestamp: serverTimestamp() });
+        // บันทึกสำเร็จ ไม่ต้องรัน render ใหม่ทั้งหน้า เพราะ Snapshot จะจัดการเงียบๆ
     };
 
     window.executeDelete = async function() {
@@ -264,7 +259,6 @@
 </script>
 
 <script>
-    // --- ระบบ Smart Matcher (ฟังก์ชันใหม่) ---
     window.getDotColor = function(cls) {
         if(!cls) return "🟢";
         const c = cls.toUpperCase();
@@ -292,9 +286,14 @@
         const curVal = selectEl.value;
         const box = selectEl.closest('.card');
         const role = selectEl.dataset.role;
-        let partnerVal = "";
+        
+        // หาว่าใครที่ถูกเลือกไปแล้วในช่องอื่นในกล่องเดียวกัน
+        const allSelectedInBox = Array.from(box.querySelectorAll('.p-select'))
+                                     .map(s => s.value)
+                                     .filter(val => val !== "" && val !== curVal);
 
-        // หาว่าใครคือคู่หูในทีมเดียวกัน
+        // หาคู่หูเพื่อเช็ค 🤝
+        let partnerVal = "";
         if (role === 'p1a') partnerVal = box.querySelector('[data-role="p2a"]').value;
         if (role === 'p2a') partnerVal = box.querySelector('[data-role="p1a"]').value;
         if (role === 'p1b') partnerVal = box.querySelector('[data-role="p2b"]').value;
@@ -304,15 +303,15 @@
         
         const activeMembers = window.allDataMemory.filter(m => m.Status === "Active");
         activeMembers.forEach(m => {
+            // ถ้าชื่อถูกเลือกไปแล้วในช่องอื่น (ยกเว้นช่องตัวเอง) ไม่ต้องแสดง
+            if (allSelectedInBox.includes(m.Name)) return;
+
             const dot = window.getDotColor(m.Class);
             let text = `${dot} ${m.Name} [${m.Class}]`;
             
-            // เช็คว่าเคยคู่กันไหม แล้วเพิ่มสัญลักษณ์
             if (partnerVal && m.Name !== partnerVal) {
                 const pCount = window.getPartnerCount(m.Name, partnerVal);
-                if (pCount > 0) {
-                    text += `  🤝${pCount > 1 ? '×'+pCount : ''}`;
-                }
+                if (pCount > 0) text += `  🤝${pCount > 1 ? '×'+pCount : ''}`;
             }
             
             const opt = document.createElement('option');
@@ -322,32 +321,22 @@
         });
         
         selectEl.value = curVal;
-        if(curVal) window.applyColor(selectEl);
+        window.applyColor(selectEl);
     }
 
     window.handleSelectChange = function(el) {
-        window.applyColor(el);
         const box = el.closest('.card');
-        const role = el.dataset.role;
-        
-        // เมื่อช่องนี้ถูกเลือก ให้ไป Update ข้อมูลใน Dropdown ของคู่หู
-        let partnerRole = "";
-        if (role === 'p1a') partnerRole = 'p2a';
-        if (role === 'p2a') partnerRole = 'p1a';
-        if (role === 'p1b') partnerRole = 'p2b';
-        if (role === 'p2b') partnerRole = 'p1b';
-        
-        const partnerEl = box.querySelector(`[data-role="${partnerRole}"]`);
-        if (partnerEl && !partnerEl.disabled) {
-            window.refreshSelectOptions(partnerEl);
-        }
+        // เมื่อมีการเปลี่ยนคน ให้ Refresh ทุก Dropdown ในกล่องนั้นทันที เพื่อเอาชื่อที่ถูกเลือกออก/คืนกลับมา
+        box.querySelectorAll('.p-select').forEach(s => {
+            if(!s.disabled) window.refreshSelectOptions(s);
+        });
     }
-    // ----------------------------------------
 
     window.renderAll = function() {
         renderCombinedList();
-        updateDropdowns();
-        if (document.getElementById('page2').classList.contains('active')) renderMatchHistory();
+        if (document.getElementById('page2').classList.contains('active')) {
+            renderMatchHistory();
+        }
     }
 
     window.showPage = function(num) {
@@ -355,14 +344,19 @@
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
         document.getElementById('page' + num).classList.add('active');
         document.querySelectorAll('.nav-item')[num-1].classList.add('active');
-        if(num === 2) { window.isHistoryLoaded = false; renderMatchHistory(); }
+        if(num === 2) { 
+            window.isHistoryLoaded = false; 
+            renderMatchHistory();
+            // Scroll ลงล่างสุดเมื่อเปิดหน้าจดผล
+            setTimeout(() => {
+                window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+            }, 100);
+        }
     }
 
     window.updateDropdowns = function() {
         document.querySelectorAll('#matchContainer .p-select').forEach(s => { 
-            if(!s.disabled) { 
-                window.refreshSelectOptions(s);
-            } 
+            if(!s.disabled) window.refreshSelectOptions(s);
         });
     }
 
@@ -397,14 +391,9 @@
                     const opt = document.createElement('option'); 
                     opt.value = name; 
                     const mem = window.allDataMemory.find(x => x.Name === name);
-                    if(mem) {
-                        const dot = window.getDotColor(mem.Class);
-                        opt.text = `${dot} ${name} [${mem.Class}]`;
-                    } else {
-                        opt.text = name; 
-                    }
-                    selects[i].add(opt); 
-                    selects[i].value = name; 
+                    const dot = mem ? window.getDotColor(mem.Class) : "⚪";
+                    opt.text = `${dot} ${name} [${mem ? mem.Class : ''}]`;
+                    selects[i].add(opt); selects[i].value = name; 
                     window.applyColor(selects[i]); 
                 }
             });
@@ -422,15 +411,15 @@
 
     function createMatchElement(id) {
         const div = document.createElement('div'); div.className = 'card'; div.id = `match-box-${id}`;
-        // เปลี่ยนมาใช้ handleSelectChange(this) แทน applyColor(this) แบบตรงๆ
         div.innerHTML = `<div class="game-label">เกมที่ ${id}</div><div class="match-grid"><div><select class="p-select" onchange="handleSelectChange(this)" data-role="p1a"></select><select class="p-select" onchange="handleSelectChange(this)" data-role="p2a"></select></div><div class="vs-text">VS</div><div><select class="p-select" onchange="handleSelectChange(this)" data-role="p1b"></select><select class="p-select" onchange="handleSelectChange(this)" data-role="p2b"></select></div></div><div class="btn-group"><button class="btn-choice" onclick="setBoxWin(this, 'Team A')">A ชนะ</button><button class="btn-choice" onclick="setBoxWin(this, 'Team B')">B ชนะ</button></div><button class="btn-main" onclick="saveMatchBox(${id})">บันทึกผล</button><button class="btn-edit-link" onclick="editMatchBox(${id})">แก้ไขข้อมูล</button>`;
         return div;
     }
 
     window.addNewMatchBox = function(shouldScroll = false) {
         window.gameCount++;
-        document.getElementById('matchContainer').appendChild(createMatchElement(window.gameCount));
-        updateDropdowns();
+        const box = createMatchElement(window.gameCount);
+        document.getElementById('matchContainer').appendChild(box);
+        box.querySelectorAll('.p-select').forEach(s => window.refreshSelectOptions(s));
         if(shouldScroll) window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
     }
 
@@ -443,7 +432,7 @@
     }
 
     window.applyColor = function(el) {
-        if (!el || el.selectedIndex <= 0) { el.style.borderLeftColor = 'transparent'; el.className = "p-select"; return; }
+        if (!el || el.selectedIndex <= 0) { el.style.borderLeftColor = 'transparent'; return; }
         el.className = "p-select";
         const val = el.options[el.selectedIndex].text;
         const clsMatch = val.match(/\[(.*?)\]/);
@@ -462,6 +451,7 @@
         }
         box.querySelector('.btn-edit-link').style.display = 'none';
         box.querySelectorAll('select, .btn-choice').forEach(el => el.disabled = false);
+        box.querySelectorAll('.p-select').forEach(s => window.refreshSelectOptions(s));
     }
 
     window.setBoxWin = function(btn, team) {
@@ -470,7 +460,6 @@
         btn.classList.add('selected'); btn.parentElement.dataset.winner = team;
     }
 
-    // ระบบสถิติย่อ
     window.openStats = function() {
         document.getElementById('statsModal').style.display = "flex";
         const stats = window.allDataMemory.filter(i => i.TotalPlayed !== undefined);
@@ -479,12 +468,7 @@
         sorted.forEach(m => { 
             if(m.Name) {
                 const wr = m.TotalPlayed > 0 ? Math.round((m.Win / m.TotalPlayed) * 100) : 0;
-                html += `<tr>
-                    <td style="padding-left:10px;"><b>${m.Name}</b></td>
-                    <td class="${window.getTxtClass(m.Class)}" style="text-align:center;">${m.Class}</td>
-                    <td style="text-align:center; font-weight:bold;">${m.TotalPlayed || '-'}</td>
-                    <td style="text-align:center; color:var(--text-dim); font-size:0.85rem;">${m.TotalPlayed > 0 ? wr+'%' : '-'}</td>
-                </tr>`;
+                html += `<tr><td style="padding-left:10px;"><b>${m.Name}</b></td><td class="${window.getTxtClass(m.Class)}" style="text-align:center;">${m.Class}</td><td style="text-align:center; font-weight:bold;">${m.TotalPlayed || '-'}</td><td style="text-align:center; color:var(--text-dim); font-size:0.85rem;">${m.TotalPlayed > 0 ? wr+'%' : '-'}</td></tr>`;
             }
         });
         document.getElementById('miniStatsTableBody').innerHTML = html || "<tr><td colspan='4' style='padding:20px; text-align:center;'>ไม่มีข้อมูล</td></tr>";
