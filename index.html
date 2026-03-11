@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Badminton Hub Pro (V3.3 - Refined Stats)</title>
+    <title>Badminton Hub Pro (V4.0 - Smart Matcher)</title>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -264,6 +264,86 @@
 </script>
 
 <script>
+    // --- ระบบ Smart Matcher (ฟังก์ชันใหม่) ---
+    window.getDotColor = function(cls) {
+        if(!cls) return "🟢";
+        const c = cls.toUpperCase();
+        if(c.includes('P')) return "🟣";
+        if(c.includes('S')) return "🔴";
+        if(c.includes('N')) return "🟠";
+        if(c.includes('BG')) return "🔵";
+        return "🟢";
+    }
+
+    window.getPartnerCount = function(p1, p2) {
+        if(!p1 || !p2 || p1 === p2) return 0;
+        let count = 0;
+        window.allDataMemory.forEach(m => {
+            if (m.Type === "MatchHistory") {
+                if ((m.p1a === p1 && m.p2a === p2) || (m.p1a === p2 && m.p2a === p1)) count++;
+                if ((m.p1b === p1 && m.p2b === p2) || (m.p1b === p2 && m.p2b === p1)) count++;
+            }
+        });
+        return count;
+    }
+
+    window.refreshSelectOptions = function(selectEl) {
+        if(!selectEl) return;
+        const curVal = selectEl.value;
+        const box = selectEl.closest('.card');
+        const role = selectEl.dataset.role;
+        let partnerVal = "";
+
+        // หาว่าใครคือคู่หูในทีมเดียวกัน
+        if (role === 'p1a') partnerVal = box.querySelector('[data-role="p2a"]').value;
+        if (role === 'p2a') partnerVal = box.querySelector('[data-role="p1a"]').value;
+        if (role === 'p1b') partnerVal = box.querySelector('[data-role="p2b"]').value;
+        if (role === 'p2b') partnerVal = box.querySelector('[data-role="p1b"]').value;
+
+        selectEl.innerHTML = '<option value="">- เลือก -</option>';
+        
+        const activeMembers = window.allDataMemory.filter(m => m.Status === "Active");
+        activeMembers.forEach(m => {
+            const dot = window.getDotColor(m.Class);
+            let text = `${dot} ${m.Name} [${m.Class}]`;
+            
+            // เช็คว่าเคยคู่กันไหม แล้วเพิ่มสัญลักษณ์
+            if (partnerVal && m.Name !== partnerVal) {
+                const pCount = window.getPartnerCount(m.Name, partnerVal);
+                if (pCount > 0) {
+                    text += `  🤝${pCount > 1 ? '×'+pCount : ''}`;
+                }
+            }
+            
+            const opt = document.createElement('option');
+            opt.value = m.Name;
+            opt.text = text;
+            selectEl.appendChild(opt);
+        });
+        
+        selectEl.value = curVal;
+        if(curVal) window.applyColor(selectEl);
+    }
+
+    window.handleSelectChange = function(el) {
+        window.applyColor(el);
+        const box = el.closest('.card');
+        const role = el.dataset.role;
+        
+        // เมื่อช่องนี้ถูกเลือก ให้ไป Update ข้อมูลใน Dropdown ของคู่หู
+        let partnerRole = "";
+        if (role === 'p1a') partnerRole = 'p2a';
+        if (role === 'p2a') partnerRole = 'p1a';
+        if (role === 'p1b') partnerRole = 'p2b';
+        if (role === 'p2b') partnerRole = 'p1b';
+        
+        const partnerEl = box.querySelector(`[data-role="${partnerRole}"]`);
+        if (partnerEl && !partnerEl.disabled) {
+            window.refreshSelectOptions(partnerEl);
+        }
+    }
+    // ----------------------------------------
+
     window.renderAll = function() {
         renderCombinedList();
         updateDropdowns();
@@ -278,12 +358,11 @@
         if(num === 2) { window.isHistoryLoaded = false; renderMatchHistory(); }
     }
 
-    function updateDropdowns() {
-        const activeMembers = window.allDataMemory.filter(m => m.Status === "Active");
-        let options = '<option value="">- เลือก -</option>';
-        activeMembers.forEach(m => { options += `<option value="${m.Name}">${m.Name} [${m.Class}]</option>`; });
+    window.updateDropdowns = function() {
         document.querySelectorAll('#matchContainer .p-select').forEach(s => { 
-            if(!s.disabled) { const cur = s.value; s.innerHTML = options; s.value = cur; if(cur) window.applyColor(s); } 
+            if(!s.disabled) { 
+                window.refreshSelectOptions(s);
+            } 
         });
     }
 
@@ -312,8 +391,22 @@
             container.appendChild(box);
             const b = document.getElementById(`match-box-${window.gameCount}`);
             const selects = b.querySelectorAll('.p-select');
+            
             [m.p1a, m.p2a, m.p1b, m.p2b].forEach((name, i) => {
-                if(name) { const opt = document.createElement('option'); opt.value = name; opt.text = name; selects[i].add(opt); selects[i].value = name; }
+                if(name) { 
+                    const opt = document.createElement('option'); 
+                    opt.value = name; 
+                    const mem = window.allDataMemory.find(x => x.Name === name);
+                    if(mem) {
+                        const dot = window.getDotColor(mem.Class);
+                        opt.text = `${dot} ${name} [${mem.Class}]`;
+                    } else {
+                        opt.text = name; 
+                    }
+                    selects[i].add(opt); 
+                    selects[i].value = name; 
+                    window.applyColor(selects[i]); 
+                }
             });
             const btnGroup = b.querySelector('.btn-group');
             btnGroup.dataset.winner = m.winner;
@@ -329,7 +422,8 @@
 
     function createMatchElement(id) {
         const div = document.createElement('div'); div.className = 'card'; div.id = `match-box-${id}`;
-        div.innerHTML = `<div class="game-label">เกมที่ ${id}</div><div class="match-grid"><div><select class="p-select" onchange="applyColor(this)" data-role="p1a"></select><select class="p-select" onchange="applyColor(this)" data-role="p2a"></select></div><div class="vs-text">VS</div><div><select class="p-select" onchange="applyColor(this)" data-role="p1b"></select><select class="p-select" onchange="applyColor(this)" data-role="p2b"></select></div></div><div class="btn-group"><button class="btn-choice" onclick="setBoxWin(this, 'Team A')">A ชนะ</button><button class="btn-choice" onclick="setBoxWin(this, 'Team B')">B ชนะ</button></div><button class="btn-main" onclick="saveMatchBox(${id})">บันทึกผล</button><button class="btn-edit-link" onclick="editMatchBox(${id})">แก้ไขข้อมูล</button>`;
+        // เปลี่ยนมาใช้ handleSelectChange(this) แทน applyColor(this) แบบตรงๆ
+        div.innerHTML = `<div class="game-label">เกมที่ ${id}</div><div class="match-grid"><div><select class="p-select" onchange="handleSelectChange(this)" data-role="p1a"></select><select class="p-select" onchange="handleSelectChange(this)" data-role="p2a"></select></div><div class="vs-text">VS</div><div><select class="p-select" onchange="handleSelectChange(this)" data-role="p1b"></select><select class="p-select" onchange="handleSelectChange(this)" data-role="p2b"></select></div></div><div class="btn-group"><button class="btn-choice" onclick="setBoxWin(this, 'Team A')">A ชนะ</button><button class="btn-choice" onclick="setBoxWin(this, 'Team B')">B ชนะ</button></div><button class="btn-main" onclick="saveMatchBox(${id})">บันทึกผล</button><button class="btn-edit-link" onclick="editMatchBox(${id})">แก้ไขข้อมูล</button>`;
         return div;
     }
 
@@ -349,7 +443,7 @@
     }
 
     window.applyColor = function(el) {
-        if (!el || el.selectedIndex <= 0) { el.style.borderLeftColor = 'transparent'; return; }
+        if (!el || el.selectedIndex <= 0) { el.style.borderLeftColor = 'transparent'; el.className = "p-select"; return; }
         el.className = "p-select";
         const val = el.options[el.selectedIndex].text;
         const clsMatch = val.match(/\[(.*?)\]/);
@@ -376,7 +470,7 @@
         btn.classList.add('selected'); btn.parentElement.dataset.winner = team;
     }
 
-    // ระบบสถิติย่อ (Refined Table Layout)
+    // ระบบสถิติย่อ
     window.openStats = function() {
         document.getElementById('statsModal').style.display = "flex";
         const stats = window.allDataMemory.filter(i => i.TotalPlayed !== undefined);
