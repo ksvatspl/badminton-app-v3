@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Badminton Hub Pro (V4.6 - Full Restoration)</title>
+    <title>Badminton Hub Pro (V4.6 - Sortable Edition)</title>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -19,7 +19,6 @@
         .card { background: var(--bg-card); border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); position: relative; }
         .card.hidden-match { display: none; }
         
-        /* Dashboard Stats */
         .dash-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 20px; }
         .dash-item { background: #36393f; padding: 12px 5px; border-radius: 10px; text-align: center; border: 1px solid var(--border); }
         .dash-val { display: block; font-size: 1.3rem; font-weight: bold; color: var(--accent); }
@@ -38,7 +37,6 @@
         
         .btn-add-manual { width: 100%; padding: 15px; background: transparent; border: 2px dashed var(--border); color: var(--text-dim); border-radius: 12px; font-weight: bold; cursor: pointer; margin-top: 10px; }
 
-        /* Status Buttons Fix */
         .btn-status { border: none; border-radius: 6px; padding: 6px 4px; font-size: 0.7rem; font-weight: bold; cursor: pointer; width: 100%; }
         .btn-out { background: rgba(240, 71, 71, 0.15); color: var(--danger); border: 1px solid var(--danger); }
         .btn-in { background: rgba(67, 181, 129, 0.15); color: var(--accent); border: 1px solid var(--accent); }
@@ -55,7 +53,7 @@
         .btn-edit-link { background: transparent; border: none; color: var(--warning); font-size: 0.75rem; text-decoration: underline; margin-top: 8px; display: none; width: 100%; cursor: pointer; }
         
         .m-table { width: 100%; border-collapse: collapse; }
-        .m-table th { color: var(--text-dim); font-size: 0.7rem; padding: 10px 4px; border-bottom: 1px solid var(--border); text-align: center; }
+        .m-table th { color: var(--text-dim); font-size: 0.7rem; padding: 10px 4px; border-bottom: 1px solid var(--border); text-align: center; cursor: pointer; user-select: none; }
         .m-table td { padding: 12px 4px; border-bottom: 1px solid #36393f; font-size: 0.9rem; text-align: center; }
         .m-table th:first-child, .m-table td:first-child { text-align: left; padding-left: 10px; }
         
@@ -86,7 +84,8 @@
         </div>
         <div class="card" style="padding: 5px;">
             <table class="m-table">
-                <thead><tr><th>ชื่อ</th><th>คลาส</th><th>เกม</th><th>Win%</th><th>สถานะ</th></tr></thead>
+                <thead id="memberListHead">
+                    </thead>
                 <tbody id="memberListBody"></tbody>
             </table>
         </div>
@@ -147,7 +146,11 @@
             <span style="font-size: 24px; cursor: pointer; color: var(--text-dim);" onclick="closeStats()">&times;</span>
         </div>
         <div style="overflow-y: auto; padding: 10px;">
-            <table class="m-table"><thead><tr><th style="text-align:left;">ชื่อ</th><th>คลาส</th><th>เกม</th><th>Win%</th></tr></thead><tbody id="miniStatsTableBody"></tbody></table>
+            <table class="m-table">
+                <thead id="statsListHead">
+                    </thead>
+                <tbody id="miniStatsTableBody"></tbody>
+            </table>
         </div>
         <div style="padding: 10px;"><button class="btn-main" onclick="closeStats()">ปิด</button></div>
     </div>
@@ -173,6 +176,7 @@
     window.fireMembers = [];
     window.fireMatches = [];
     window.hideSavedMatches = false;
+    window.currentSort = { key: 'TotalPlayed', direction: 'desc' };
 
     onSnapshot(collection(db, "members"), (snapshot) => {
         window.fireMembers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -189,13 +193,20 @@
 
     function calculateStats() {
         let statsMap = {};
-        window.fireMembers.forEach(m => { statsMap[m.name] = { id: m.id, Name: m.name, Class: m.class, Status: m.status, TotalPlayed: 0, Win: 0, Loss: 0 }; });
+        window.fireMembers.forEach(m => { 
+            statsMap[m.name] = { id: m.id, Name: m.name, Class: m.class, Status: m.status, TotalPlayed: 0, Win: 0, Loss: 0, WinRate: 0 }; 
+        });
         window.fireMatches.forEach(m => {
             const update = (p, isWin) => { if(p && statsMap[p]) { statsMap[p].TotalPlayed++; if(isWin) statsMap[p].Win++; else statsMap[p].Loss++; } };
             if(m.winner === 'Team A') { update(m.p1a, true); update(m.p2a, true); update(m.p1b, false); update(m.p2b, false); }
             else if(m.winner === 'Team B') { update(m.p1a, false); update(m.p2a, false); update(m.p1b, true); update(m.p2b, true); }
         });
-        window.allDataMemory = Object.values(statsMap);
+        
+        window.allDataMemory = Object.values(statsMap).map(m => {
+            m.WinRate = m.TotalPlayed > 0 ? Math.round((m.Win/m.TotalPlayed)*100) : 0;
+            return m;
+        });
+        
         renderMemberList();
         updateDash();
     }
@@ -259,14 +270,50 @@
         return "txt-bb";
     };
 
+    window.setSort = (key) => {
+        if (window.currentSort.key === key) {
+            window.currentSort.direction = window.currentSort.direction === 'asc' ? 'desc' : 'asc';
+        } else {
+            window.currentSort.key = key;
+            window.currentSort.direction = 'desc';
+        }
+        renderMemberList();
+        if (document.getElementById('statsModal').style.display === 'flex') openStats();
+    };
+
+    window.getSortedData = () => {
+        return [...window.allDataMemory].sort((a, b) => {
+            // Inactive อยู่ล่างเสมอ
+            if (a.Status !== b.Status) return a.Status === "Active" ? -1 : 1;
+            
+            let valA = a[window.currentSort.key];
+            let valB = b[window.currentSort.key];
+            
+            if (typeof valA === 'string') {
+                return window.currentSort.direction === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+            } else {
+                return window.currentSort.direction === 'asc' ? valA - valB : valB - valA;
+            }
+        });
+    };
+
     window.renderMemberList = () => {
+        const thead = document.getElementById('memberListHead');
         const tbody = document.getElementById('memberListBody');
+        const arrow = window.currentSort.direction === 'asc' ? '↑' : '↓';
+        
+        thead.innerHTML = `<tr>
+            <th onclick="setSort('Name')">ชื่อ ${window.currentSort.key==='Name'?arrow:''}</th>
+            <th onclick="setSort('Class')">คลาส ${window.currentSort.key==='Class'?arrow:''}</th>
+            <th onclick="setSort('TotalPlayed')">เกม ${window.currentSort.key==='TotalPlayed'?arrow:''}</th>
+            <th onclick="setSort('WinRate')">Win% ${window.currentSort.key==='WinRate'?arrow:''}</th>
+            <th>สถานะ</th>
+        </tr>`;
+
         let html = "";
-        const sorted = [...window.allDataMemory].sort((a,b) => (a.Status==="Active" ? -1:1) || (b.TotalPlayed - a.TotalPlayed));
-        sorted.forEach(m => {
+        window.getSortedData().forEach(m => {
             const isActive = m.Status === "Active";
-            const wr = m.TotalPlayed > 0 ? Math.round((m.Win/m.TotalPlayed)*100) : 0;
-            html += `<tr><td><span class="status-dot ${isActive?'dot-active':'dot-off'}"></span><b>${m.Name}</b></td><td class="${getTxtClass(m.Class)}">${m.Class}</td><td><b>${m.TotalPlayed}</b></td><td>${wr}%</td><td><button class="btn-status ${isActive?'btn-out':'btn-in'}" onclick="quickStatusUpdate('${m.Name}','${isActive?'checkout':'undo'}')">${isActive?'ออก':'เข้า'}</button></td></tr>`;
+            html += `<tr><td><span class="status-dot ${isActive?'dot-active':'dot-off'}"></span><b>${m.Name}</b></td><td class="${getTxtClass(m.Class)}">${m.Class}</td><td><b>${m.TotalPlayed}</b></td><td>${m.WinRate}%</td><td><button class="btn-status ${isActive?'btn-out':'btn-in'}" onclick="quickStatusUpdate('${m.Name}','${isActive?'checkout':'undo'}')">${isActive?'ออก':'เข้า'}</button></td></tr>`;
         });
         tbody.innerHTML = html;
     };
@@ -309,7 +356,6 @@
             box.querySelector('.btn-edit-link').style.display = 'block';
         });
 
-        // สร้างกล่องเปล่าถ้ายังไม่มี
         if(container.querySelectorAll('.card:not([data-docid])').length === 0) {
             addNewManualBox();
         }
@@ -388,14 +434,25 @@
     window.showPage = (n) => {
         document.querySelectorAll('.page').forEach((p,i) => p.classList.toggle('active', i+1===n));
         document.querySelectorAll('.nav-item').forEach((p,i) => p.classList.toggle('active', i+1===n));
+        if(n===1) renderMemberList();
         if(n===2) renderMatchHistoryStrict();
     };
 
     window.openStats = () => {
         document.getElementById('statsModal').style.display="flex";
+        const head = document.getElementById('statsListHead');
+        const arrow = window.currentSort.direction === 'asc' ? '↑' : '↓';
+        
+        head.innerHTML = `<tr>
+            <th style="text-align:left;" onclick="setSort('Name')">ชื่อ ${window.currentSort.key==='Name'?arrow:''}</th>
+            <th onclick="setSort('Class')">คลาส ${window.currentSort.key==='Class'?arrow:''}</th>
+            <th onclick="setSort('TotalPlayed')">เกม ${window.currentSort.key==='TotalPlayed'?arrow:''}</th>
+            <th onclick="setSort('WinRate')">Win% ${window.currentSort.key==='WinRate'?arrow:''}</th>
+        </tr>`;
+
         let html = "";
-        [...window.allDataMemory].sort((a,b)=>b.TotalPlayed-a.TotalPlayed).forEach(m => {
-            html += `<tr><td><b>${m.Name}</b></td><td class="${getTxtClass(m.Class)}">${m.Class}</td><td><b>${m.TotalPlayed}</b></td><td>${m.TotalPlayed?Math.round((m.Win/m.TotalPlayed)*100):0}%</td></tr>`;
+        window.getSortedData().forEach(m => {
+            html += `<tr><td><b>${m.Name}</b></td><td class="${getTxtClass(m.Class)}">${m.Class}</td><td><b>${m.TotalPlayed}</b></td><td>${m.WinRate}%</td></tr>`;
         });
         document.getElementById('miniStatsTableBody').innerHTML = html;
     };
