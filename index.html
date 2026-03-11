@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Badminton Hub Pro (V4.6 - Sortable Edition)</title>
+    <title>Badminton Hub Pro (V4.7 - Active Stats Only)</title>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -43,8 +43,7 @@
 
         .header-btns { display: flex; gap: 8px; }
         .btn-mini { background: #5865f2; color: white; border: none; border-radius: 6px; padding: 6px 10px; font-size: 0.75rem; font-weight: bold; cursor: pointer; }
-        .btn-mini.toggle-active { background: var(--warning); color: #000; }
-
+        
         .btn-group { display: flex; gap: 10px; margin-bottom: 10px; }
         .btn-choice { flex: 1; padding: 10px; background: #36393f; border: 1px solid var(--border); color: var(--text-dim); border-radius: 8px; cursor: pointer; font-weight: bold; }
         .btn-choice.selected { background: rgba(67, 181, 129, 0.2); border-color: var(--accent); color: var(--accent); }
@@ -84,8 +83,7 @@
         </div>
         <div class="card" style="padding: 5px;">
             <table class="m-table">
-                <thead id="memberListHead">
-                    </thead>
+                <thead id="memberListHead"></thead>
                 <tbody id="memberListBody"></tbody>
             </table>
         </div>
@@ -97,7 +95,7 @@
         <h2>🏸 จดผล</h2>
         <div class="header-btns">
             <button id="toggleHideBtn" onclick="toggleHideSaved()" class="btn-mini">👁️ ซ่อนที่จบแล้ว</button>
-            <button onclick="openStats()" class="btn-mini">📊 สถิติ</button>
+            <button onclick="openStats()" class="btn-mini">📊 สถิติเฉพาะคนเล่น</button>
         </div>
     </div>
     <div class="container">
@@ -142,13 +140,12 @@
 <div id="statsModal" class="modal">
     <div class="modal-content">
         <div style="padding: 15px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
-            <h3 style="margin:0; color:var(--accent);">📊 สถิติเกม</h3>
+            <h3 style="margin:0; color:var(--accent);">📊 สถิติเกม (คนเล่นปัจจุบัน)</h3>
             <span style="font-size: 24px; cursor: pointer; color: var(--text-dim);" onclick="closeStats()">&times;</span>
         </div>
         <div style="overflow-y: auto; padding: 10px;">
             <table class="m-table">
-                <thead id="statsListHead">
-                    </thead>
+                <thead id="statsListHead"></thead>
                 <tbody id="miniStatsTableBody"></tbody>
             </table>
         </div>
@@ -270,7 +267,7 @@
         return "txt-bb";
     };
 
-    window.setSort = (key) => {
+    window.setSort = (key, fromModal = false) => {
         if (window.currentSort.key === key) {
             window.currentSort.direction = window.currentSort.direction === 'asc' ? 'desc' : 'asc';
         } else {
@@ -278,17 +275,18 @@
             window.currentSort.direction = 'desc';
         }
         renderMemberList();
-        if (document.getElementById('statsModal').style.display === 'flex') openStats();
+        if (fromModal || document.getElementById('statsModal').style.display === 'flex') openStats();
     };
 
-    window.getSortedData = () => {
-        return [...window.allDataMemory].sort((a, b) => {
-            // Inactive อยู่ล่างเสมอ
-            if (a.Status !== b.Status) return a.Status === "Active" ? -1 : 1;
-            
+    window.getSortedData = (filterActive = false) => {
+        let data = [...window.allDataMemory];
+        if (filterActive) {
+            data = data.filter(m => m.Status === "Active");
+        }
+        return data.sort((a, b) => {
+            if (!filterActive && a.Status !== b.Status) return a.Status === "Active" ? -1 : 1;
             let valA = a[window.currentSort.key];
             let valB = b[window.currentSort.key];
-            
             if (typeof valA === 'string') {
                 return window.currentSort.direction === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
             } else {
@@ -311,7 +309,7 @@
         </tr>`;
 
         let html = "";
-        window.getSortedData().forEach(m => {
+        window.getSortedData(false).forEach(m => {
             const isActive = m.Status === "Active";
             html += `<tr><td><span class="status-dot ${isActive?'dot-active':'dot-off'}"></span><b>${m.Name}</b></td><td class="${getTxtClass(m.Class)}">${m.Class}</td><td><b>${m.TotalPlayed}</b></td><td>${m.WinRate}%</td><td><button class="btn-status ${isActive?'btn-out':'btn-in'}" onclick="quickStatusUpdate('${m.Name}','${isActive?'checkout':'undo'}')">${isActive?'ออก':'เข้า'}</button></td></tr>`;
         });
@@ -321,18 +319,14 @@
     window.renderMatchHistoryStrict = () => {
         const container = document.getElementById('matchContainer');
         const matches = window.fireMatches;
-        
         matches.forEach((m, index) => {
             const num = index + 1;
             let box = document.getElementById(`match-box-${num}`);
             if(!box) { box = createMatchElement(num); container.appendChild(box); }
             box.dataset.docid = m.id;
-            
             if(window.hideSavedMatches && !box.dataset.editing) box.classList.add('hidden-match');
             else box.classList.remove('hidden-match');
-
             if(box.dataset.editing === "true") return;
-
             const selects = box.querySelectorAll('.p-select');
             const players = [m.p1a, m.p2a, m.p1b, m.p2b];
             selects.forEach((sel, i) => {
@@ -340,14 +334,12 @@
                 sel.value = players[i]; sel.disabled = true;
                 applyColorManual(sel, players[i]);
             });
-
             const btnGroup = box.querySelector('.btn-group');
             btnGroup.dataset.winner = m.winner;
             btnGroup.querySelectorAll('.btn-choice').forEach(b => {
                 b.classList.toggle('selected', (m.winner==='Team A' && b.innerText==='A ชนะ') || (m.winner==='Team B' && b.innerText==='B ชนะ'));
                 b.disabled = true;
             });
-
             const mainBtn = box.querySelector('.btn-main');
             if(mainBtn) {
                 const savedDiv = document.createElement('div'); savedDiv.className = 'btn-saved-compact';
@@ -355,10 +347,7 @@
             }
             box.querySelector('.btn-edit-link').style.display = 'block';
         });
-
-        if(container.querySelectorAll('.card:not([data-docid])').length === 0) {
-            addNewManualBox();
-        }
+        if(container.querySelectorAll('.card:not([data-docid])').length === 0) addNewManualBox();
     };
 
     window.addNewManualBox = () => {
@@ -374,13 +363,11 @@
         const box = selectEl.closest('.card');
         const role = selectEl.dataset.role;
         const allSelectedInBox = Array.from(box.querySelectorAll('.p-select')).map(s => s.value).filter(v => v !== "" && v !== curVal);
-        
         let partnerVal = "";
         if(role==='p1a') partnerVal = box.querySelector('[data-role="p2a"]').value;
         if(role==='p2a') partnerVal = box.querySelector('[data-role="p1a"]').value;
         if(role==='p1b') partnerVal = box.querySelector('[data-role="p2b"]').value;
         if(role==='p2b') partnerVal = box.querySelector('[data-role="p1b"]').value;
-
         selectEl.innerHTML = '<option value="">- เลือก -</option>';
         window.allDataMemory.filter(m => m.Status === "Active").forEach(m => {
             if(allSelectedInBox.includes(m.Name)) return;
@@ -442,16 +429,14 @@
         document.getElementById('statsModal').style.display="flex";
         const head = document.getElementById('statsListHead');
         const arrow = window.currentSort.direction === 'asc' ? '↑' : '↓';
-        
         head.innerHTML = `<tr>
-            <th style="text-align:left;" onclick="setSort('Name')">ชื่อ ${window.currentSort.key==='Name'?arrow:''}</th>
-            <th onclick="setSort('Class')">คลาส ${window.currentSort.key==='Class'?arrow:''}</th>
-            <th onclick="setSort('TotalPlayed')">เกม ${window.currentSort.key==='TotalPlayed'?arrow:''}</th>
-            <th onclick="setSort('WinRate')">Win% ${window.currentSort.key==='WinRate'?arrow:''}</th>
+            <th style="text-align:left;" onclick="setSort('Name', true)">ชื่อ ${window.currentSort.key==='Name'?arrow:''}</th>
+            <th onclick="setSort('Class', true)">คลาส ${window.currentSort.key==='Class'?arrow:''}</th>
+            <th onclick="setSort('TotalPlayed', true)">เกม ${window.currentSort.key==='TotalPlayed'?arrow:''}</th>
+            <th onclick="setSort('WinRate', true)">Win% ${window.currentSort.key==='WinRate'?arrow:''}</th>
         </tr>`;
-
         let html = "";
-        window.getSortedData().forEach(m => {
+        window.getSortedData(true).forEach(m => {
             html += `<tr><td><b>${m.Name}</b></td><td class="${getTxtClass(m.Class)}">${m.Class}</td><td><b>${m.TotalPlayed}</b></td><td>${m.WinRate}%</td></tr>`;
         });
         document.getElementById('miniStatsTableBody').innerHTML = html;
@@ -460,7 +445,6 @@
     window.openDeleteModal = (t) => { window.deleteTarget=t; document.getElementById('deleteConfirmInput').value=""; document.getElementById('btnConfirmDelete').disabled=true; document.getElementById('deleteModal').style.display="flex"; };
     window.closeDeleteModal = () => document.getElementById('deleteModal').style.display="none";
     window.checkDeleteInput = () => document.getElementById('btnConfirmDelete').disabled = document.getElementById('deleteConfirmInput').value!=="delete";
-
     window.editMatch = (num) => {
         const box = document.getElementById(`match-box-${num}`);
         box.dataset.editing = "true";
