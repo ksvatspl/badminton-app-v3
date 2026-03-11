@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Badminton Hub Pro (V5.0 - Stable Match Logic)</title>
+    <title>Badminton Hub Pro (V5.4 - Stable Restored)</title>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -20,6 +20,7 @@
         .card.is-saved { border-left-color: var(--accent); }
         .card.hidden-match { display: none !important; }
         
+        /* Dashboard & UI */
         .dash-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 20px; }
         .dash-item { background: #36393f; padding: 12px 5px; border-radius: 10px; text-align: center; border: 1px solid var(--border); }
         .dash-val { display: block; font-size: 1.3rem; font-weight: bold; color: var(--accent); }
@@ -35,13 +36,12 @@
         
         .btn-main { width: 100%; padding: 14px; background: var(--accent); color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; }
         .btn-main:disabled { background: #4f545c; opacity: 0.6; cursor: not-allowed; }
-        
         .btn-add-manual { width: 100%; padding: 15px; background: transparent; border: 2px dashed var(--border); color: var(--text-dim); border-radius: 12px; font-weight: bold; cursor: pointer; margin-top: 10px; }
 
         .btn-status { border: none; border-radius: 6px; padding: 6px 4px; font-size: 0.7rem; font-weight: bold; cursor: pointer; width: 100%; }
         .btn-out { background: rgba(240, 71, 71, 0.15); color: var(--danger); border: 1px solid var(--danger); }
         .btn-in { background: rgba(67, 181, 129, 0.15); color: var(--accent); border: 1px solid var(--accent); }
-
+        
         .header-btns { display: flex; gap: 8px; }
         .btn-mini { background: #5865f2; color: white; border: none; border-radius: 6px; padding: 6px 10px; font-size: 0.75rem; font-weight: bold; cursor: pointer; }
         
@@ -53,10 +53,14 @@
         .btn-edit-link { background: transparent; border: none; color: var(--warning); font-size: 0.75rem; text-decoration: underline; margin-top: 8px; display: none; width: 100%; cursor: pointer; }
         
         .m-table { width: 100%; border-collapse: collapse; }
-        .m-table th { color: var(--text-dim); font-size: 0.7rem; padding: 10px 4px; border-bottom: 1px solid var(--border); text-align: center; cursor: pointer; user-select: none; }
-        .m-table td { padding: 12px 4px; border-bottom: 1px solid #36393f; font-size: 0.9rem; text-align: center; }
+        .m-table th { color: var(--text-dim); font-size: 0.65rem; padding: 10px 4px; border-bottom: 1px solid var(--border); text-align: center; cursor: pointer; }
+        .m-table td { padding: 12px 4px; border-bottom: 1px solid #36393f; font-size: 0.85rem; text-align: center; vertical-align: middle; }
         .m-table th:first-child, .m-table td:first-child { text-align: left; padding-left: 10px; }
         
+        .mem-info-wrap { display: flex; flex-direction: column; line-height: 1.2; }
+        .mem-note-sub { font-size: 0.7rem; color: #72767d; margin-top: 2px; font-weight: normal; }
+        .edit-text-btn { color: var(--warning); text-decoration: underline; cursor: pointer; font-size: 0.8rem; background: none; border: none; }
+
         .status-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; }
         .dot-active { background: var(--accent); } .dot-off { background: var(--danger); }
 
@@ -74,13 +78,16 @@
 <div id="page1" class="page active">
     <div class="page-header"><h2>👥 จัดการผู้เล่น</h2></div>
     <div class="container">
-        <div class="card">
+        <div class="card" id="memberFormCard">
+            <input type="hidden" id="edit_mem_id">
             <input type="text" id="mem_name" placeholder="ชื่อเล่น">
             <select id="mem_class">
                 <option value="BB">BB</option><option value="BB+">BB+</option><option value="BG">BG</option><option value="BG+">BG+</option><option value="N">N</option><option value="N+">N+</option><option value="S">S</option><option value="S+">S+</option><option value="P">P</option>
             </select>
-            <input type="text" id="mem_note" placeholder="หมายเหตุ">
-            <button class="btn-main" onclick="registerMember()">+ เพิ่มสมาชิก</button>
+            <input type="text" id="mem_note" placeholder="หมายเหตุ (อยู่ใต้ชื่อ)">
+            <div id="formActions">
+                <button class="btn-main" onclick="registerMember()">+ เพิ่มสมาชิก</button>
+            </div>
         </div>
         <div class="card" style="padding: 5px;">
             <table class="m-table">
@@ -132,7 +139,7 @@
             <h3 style="color:var(--danger);">⚠️ ยืนยันการลบ</h3>
             <p style="color: var(--text-dim); font-size: 0.85rem;">พิมพ์ <strong>delete</strong> เพื่อล้างข้อมูล</p>
             <input type="text" id="deleteConfirmInput" onkeyup="checkDeleteInput()" style="text-align: center;">
-            <button class="btn-main" id="btnConfirmDelete" onclick="executeDelete()" disabled style="background:var(--danger); margin-bottom:10px;">ยืนยันลบทั้งหมด</button>
+            <button class="btn-main" id="btnConfirmDelete" onclick="executeDelete()" disabled style="background:var(--danger); margin-bottom:10px;">ยืนยันลบ</button>
             <button class="btn-main" style="background:#4f545c;" onclick="closeDeleteModal()">ยกเลิก</button>
         </div>
     </div>
@@ -141,7 +148,7 @@
 <div id="statsModal" class="modal">
     <div class="modal-content">
         <div style="padding: 15px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
-            <h3 style="margin:0; color:var(--accent);">📊 สถิติเกม (คนเล่นปัจจุบัน)</h3>
+            <h3 style="margin:0; color:var(--accent);">📊 สถิติเกม (ปัจจุบัน)</h3>
             <span style="font-size: 24px; cursor: pointer; color: var(--text-dim);" onclick="closeStats()">&times;</span>
         </div>
         <div style="overflow-y: auto; padding: 10px;">
@@ -175,8 +182,6 @@
     window.fireMatches = [];
     window.hideSavedMatches = false;
     window.currentSort = { key: 'TotalPlayed', direction: 'desc' };
-    
-    // ตัวแปรเก็บว่าคิวการจดเกมถึงเบอร์ไหนแล้ว (ป้องกันเลขซ้ำ)
     window.globalNextMatchNum = 1;
 
     onSnapshot(collection(db, "members"), (snapshot) => {
@@ -187,15 +192,13 @@
     onSnapshot(query(collection(db, "matches"), orderBy("timestamp", "asc")), (snapshot) => {
         window.fireMatches = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         calculateStats();
-        if(document.getElementById('page2').classList.contains('active')) {
-            renderMatchHistoryStrict();
-        }
+        if(document.getElementById('page2').classList.contains('active')) renderMatchHistoryStrict();
     });
 
     function calculateStats() {
         let statsMap = {};
         window.fireMembers.forEach(m => { 
-            statsMap[m.name] = { id: m.id, Name: m.name, Class: m.class, Status: m.status, TotalPlayed: 0, Win: 0, Loss: 0, WinRate: 0 }; 
+            statsMap[m.name] = { id: m.id, Name: m.name, Class: m.class, Note: m.note || "", Status: m.status, TotalPlayed: 0, Win: 0, Loss: 0, WinRate: 0 }; 
         });
         window.fireMatches.forEach(m => {
             const update = (p, isWin) => { if(p && statsMap[p]) { statsMap[p].TotalPlayed++; if(isWin) statsMap[p].Win++; else statsMap[p].Loss++; } };
@@ -216,28 +219,26 @@
         n.value = ""; nt.value = "";
     };
 
+    window.updateMemberData = async function() {
+        const id = document.getElementById('edit_mem_id').value;
+        const n = document.getElementById('mem_name').value.trim();
+        const c = document.getElementById('mem_class').value;
+        const nt = document.getElementById('mem_note').value;
+        if(!id || !n) return;
+        await updateDoc(doc(db, "members", id), { name: n, class: c, note: nt });
+        cancelEditMember();
+    };
+
     window.saveMatchBox = async function(matchNum) {
         const box = document.querySelector(`.card[data-matchnum="${matchNum}"]`);
-        const btn = box.querySelector('.btn-main');
+        const btn = box.querySelector('.btn-main') || box.querySelector('.btn-saved-compact');
         const winner = box.querySelector('.btn-group').dataset.winner;
         const players = Array.from(box.querySelectorAll('.p-select')).map(s => s.value);
         if(players.includes("") || !winner) return alert("เลือกคนและทีมชนะให้ครบครับ!");
-        
-        btn.disabled = true; btn.innerText = "กำลังบันทึก...";
         delete box.dataset.editing;
-        
-        // บันทึก matchNum ฝังลงไปใน Firebase เลย
-        const data = { 
-            matchNum: parseInt(matchNum), 
-            p1a: players[0], p2a: players[1], p1b: players[2], p2b: players[3], 
-            winner, 
-            timestamp: serverTimestamp() 
-        };
-        
-        try {
-            if(box.dataset.docid) await updateDoc(doc(db, "matches", box.dataset.docid), data);
-            else await addDoc(collection(db, "matches"), data);
-        } catch(e) { btn.disabled = false; btn.innerText = "บันทึกผล"; }
+        const data = { matchNum: parseInt(matchNum), p1a: players[0], p2a: players[1], p1b: players[2], p2b: players[3], winner, timestamp: serverTimestamp() };
+        if(box.dataset.docid) await updateDoc(doc(db, "matches", box.dataset.docid), data);
+        else await addDoc(collection(db, "matches"), data);
     };
 
     window.quickStatusUpdate = async function(name, action) {
@@ -253,50 +254,32 @@
 </script>
 
 <script>
-    // --- ฟังก์ชันหลักในการแสดงผลหน้าจดผลแบบ "อัปเดตอยู่กับที่" ---
+    // --- Logic Restored from V5.0 ---
     window.renderMatchHistoryStrict = () => {
         const container = document.getElementById('matchContainer');
         let highestNum = 0;
-
         window.fireMatches.forEach((m, index) => {
-            // ดึงเลขแมตช์ที่ฝังไว้ (ถ้าข้อมูลเก่าไม่มี ให้ใช้ index + 1 แทน)
-            let mNum = m.matchNum;
-            if(!mNum) { mNum = index + 1; m.matchNum = mNum; }
+            let mNum = m.matchNum || (index + 1);
             highestNum = Math.max(highestNum, mNum);
-
-            // หากล่องในหน้าจอที่มีเลขตรงกัน ถ้าไม่มีแปลว่าเพิ่งดึงจาก Firebase
             let box = container.querySelector(`.card[data-matchnum="${mNum}"]`);
-            if(!box) { 
-                box = createMatchElement(mNum); 
-                container.appendChild(box); 
-            }
-
+            if(!box) { box = createMatchElement(mNum); container.appendChild(box); }
             box.dataset.docid = m.id;
             box.classList.add('is-saved');
-            
-            // เช็คว่าต้องซ่อนไหม
             if(window.hideSavedMatches && !box.dataset.editing) box.classList.add('hidden-match');
             else box.classList.remove('hidden-match');
-
-            // ถ้าผู้ใช้กำลังกด "แก้ไขข้อมูล" ค้างไว้ ให้ข้ามไป ไม่ทับหน้าจอ
             if(box.dataset.editing === "true") return;
-
-            // ล็อค Dropdown และใส่ข้อมูลจริง
-            const selects = box.querySelectorAll('.p-select');
-            const players = [m.p1a, m.p2a, m.p1b, m.p2b];
+            const selects = box.querySelectorAll('.p-select'), players = [m.p1a, m.p2a, m.p1b, m.p2b];
             selects.forEach((sel, i) => {
                 sel.innerHTML = `<option value="${players[i]}">${players[i]}</option>`;
                 sel.value = players[i]; sel.disabled = true;
                 applyColorManual(sel, players[i]);
             });
-
             const btnGroup = box.querySelector('.btn-group');
             btnGroup.dataset.winner = m.winner;
             btnGroup.querySelectorAll('.btn-choice').forEach(b => {
                 b.classList.toggle('selected', (m.winner==='Team A' && b.innerText==='A ชนะ') || (m.winner==='Team B' && b.innerText==='B ชนะ'));
                 b.disabled = true;
             });
-
             const mainBtn = box.querySelector('.btn-main');
             if(mainBtn) {
                 const savedDiv = document.createElement('div'); savedDiv.className = 'btn-saved-compact';
@@ -304,66 +287,58 @@
             }
             box.querySelector('.btn-edit-link').style.display = 'block';
         });
-
-        // อัปเดตตัวเลขเกมถัดไปให้ถูกต้องเสมอ
-        if (highestNum >= window.globalNextMatchNum) {
-            window.globalNextMatchNum = highestNum + 1;
-        }
-
-        // เรียงลำดับกล่องในหน้าจอให้เรียงจาก 1, 2, 3 เสมอ (เผื่อมีการโหลดสลับ)
+        window.globalNextMatchNum = highestNum + 1;
         const cards = Array.from(container.querySelectorAll('.card'));
         cards.sort((a, b) => parseInt(a.dataset.matchnum) - parseInt(b.dataset.matchnum));
         cards.forEach(c => container.appendChild(c));
-
-        // ถ้าหน้าจอยังไม่มีกล่อง หรือกล่องสุดท้ายโดนบันทึกไปแล้ว ให้สร้างกล่องว่างขึ้นมา 1 ใบอัตโนมัติ
         const lastCard = cards[cards.length - 1];
-        if (!lastCard || lastCard.dataset.docid) {
-            addNewManualBox();
-        }
+        if (!lastCard || lastCard.dataset.docid) addNewManualBox();
     };
 
     window.addNewManualBox = () => {
         const container = document.getElementById('matchContainer');
-        
-        // เช็คหาเลขที่เยอะที่สุดในหน้าจอปัจจุบันอีกครั้งกันเหนียว
         let currentMax = 0;
-        container.querySelectorAll('.card').forEach(c => {
-            currentMax = Math.max(currentMax, parseInt(c.dataset.matchnum) || 0);
-        });
+        container.querySelectorAll('.card').forEach(c => currentMax = Math.max(currentMax, parseInt(c.dataset.matchnum) || 0));
         window.globalNextMatchNum = Math.max(window.globalNextMatchNum, currentMax + 1);
-
         const box = createMatchElement(window.globalNextMatchNum);
         container.appendChild(box);
         box.querySelectorAll('.p-select').forEach(s => window.refreshSelectOptionsManual(s));
-        
         window.globalNextMatchNum++;
     };
 
     window.createMatchElement = (num) => {
-        const div = document.createElement('div'); 
-        div.className = 'card'; 
-        div.id = `match-box-${num}`; 
-        div.dataset.matchnum = num;
+        const div = document.createElement('div'); div.className = 'card'; div.dataset.matchnum = num;
         div.innerHTML = `<div class="game-label">เกมที่ ${num}</div><div class="match-grid"><div><select class="p-select" data-role="p1a" onchange="handleSel(this)"></select><select class="p-select" data-role="p2a" onchange="handleSel(this)"></select></div><div class="vs-text">VS</div><div><select class="p-select" data-role="p1b" onchange="handleSel(this)"></select><select class="p-select" data-role="p2b" onchange="handleSel(this)"></select></div></div><div class="btn-group"><button class="btn-choice" onclick="setWin(this,'Team A')">A ชนะ</button><button class="btn-choice" onclick="setWin(this,'Team B')">B ชนะ</button></div><button class="btn-main" onclick="saveMatchBox(${num})">บันทึกผล</button><button class="btn-edit-link" onclick="editMatch(${num})">แก้ไขข้อมูล</button>`;
         return div;
     };
 
-    window.toggleHideSaved = () => {
-        window.hideSavedMatches = !window.hideSavedMatches;
-        document.getElementById('toggleHideBtn').innerText = window.hideSavedMatches ? "👁️ แสดงทั้งหมด" : "👁️ ซ่อนที่จบแล้ว";
-        renderMatchHistoryStrict();
+    // --- New Feature Support: Member Edit ---
+    window.editMember = (id) => {
+        const m = window.fireMembers.find(i => i.id === id);
+        if(!m) return;
+        document.getElementById('edit_mem_id').value = m.id;
+        document.getElementById('mem_name').value = m.name;
+        document.getElementById('mem_class').value = m.class;
+        document.getElementById('mem_note').value = m.note || "";
+        document.getElementById('formActions').innerHTML = `<div style="display:flex; gap:10px;"><button class="btn-main" onclick="updateMemberData()" style="background:var(--warning); color:#000;">💾 อัปเดต</button><button class="btn-main" onclick="cancelEditMember()" style="background:#4f545c;">ยกเลิก</button></div>`;
+        window.scrollTo({top: 0, behavior: 'smooth'});
     };
 
-    // --- ส่วนการตกแต่งและจัดการรายชื่อทั่วไป ---
+    window.cancelEditMember = () => {
+        document.getElementById('edit_mem_id').value = "";
+        document.getElementById('mem_name').value = "";
+        document.getElementById('mem_note').value = "";
+        document.getElementById('formActions').innerHTML = `<button class="btn-main" onclick="registerMember()">+ เพิ่มสมาชิก</button>`;
+    };
+
+    // --- UI Helper Restored ---
     window.getDotEmoji = (cls) => { if(!cls) return "⚪"; if(cls.includes('P')) return "🟣"; if(cls.includes('S')) return "🔴"; if(cls.includes('N')) return "🟠"; if(cls.includes('BG')) return "🔵"; return "🟢"; };
     window.getPartnerCount = (p1, p2) => { let count = 0; window.fireMatches.forEach(m => { if((m.p1a===p1 && m.p2a===p2) || (m.p1a===p2 && m.p2a===p1)) count++; if((m.p1b===p1 && m.p2b===p2) || (m.p1b===p2 && m.p2b===p1)) count++; }); return count; };
     window.getTxtClass = (cls) => { if(!cls) return ""; cls = cls.toUpperCase(); if(cls.includes('P')) return "txt-p"; if(cls.includes('S')) return "txt-s"; if(cls.includes('N')) return "txt-n"; if(cls.includes('BG')) return "txt-bg"; return "txt-bb"; };
     
     window.refreshSelectOptionsManual = (selectEl) => {
-        const curVal = selectEl.value;
-        const box = selectEl.closest('.card');
-        const role = selectEl.dataset.role;
-        const allSelectedInBox = Array.from(box.querySelectorAll('.p-select')).map(s => s.value).filter(v => v !== "" && v !== curVal);
+        const curVal = selectEl.value, box = selectEl.closest('.card'), role = selectEl.dataset.role;
+        const allSelected = Array.from(box.querySelectorAll('.p-select')).map(s => s.value).filter(v => v !== "" && v !== curVal);
         let partnerVal = "";
         if(role==='p1a') partnerVal = box.querySelector('[data-role="p2a"]').value;
         if(role==='p2a') partnerVal = box.querySelector('[data-role="p1a"]').value;
@@ -371,7 +346,7 @@
         if(role==='p2b') partnerVal = box.querySelector('[data-role="p1b"]').value;
         selectEl.innerHTML = '<option value="">- เลือก -</option>';
         window.allDataMemory.filter(m => m.Status === "Active").forEach(m => {
-            if(allSelectedInBox.includes(m.Name)) return;
+            if(allSelected.includes(m.Name)) return;
             let text = `${window.getDotEmoji(m.Class)} ${m.Name} [${m.Class}]`;
             if(partnerVal && m.Name !== partnerVal) {
                 const pc = window.getPartnerCount(m.Name, partnerVal);
@@ -390,7 +365,6 @@
 
     window.handleSel = (el) => { const box = el.closest('.card'); box.querySelectorAll('.p-select').forEach(s => window.refreshSelectOptionsManual(s)); };
     window.setWin = (btn, team) => { if(btn.disabled) return; btn.parentElement.querySelectorAll('.btn-choice').forEach(b => b.classList.remove('selected')); btn.classList.add('selected'); btn.parentElement.dataset.winner = team; };
-
     window.editMatch = (num) => {
         const box = document.querySelector(`.card[data-matchnum="${num}"]`);
         box.dataset.editing = "true";
@@ -398,13 +372,35 @@
         const saved = box.querySelector('.btn-saved-compact');
         if(saved) {
             const btn = document.createElement('button'); btn.className='btn-main'; btn.innerText='อัปเดตผล';
-            btn.onclick = () => saveMatchBox(num);
-            saved.replaceWith(btn);
+            btn.onclick = () => saveMatchBox(num); saved.replaceWith(btn);
         }
         box.querySelectorAll('.p-select').forEach(s => window.refreshSelectOptionsManual(s));
     };
 
-    // --- ส่วน UI ทั่วไป หน้า 1 และ 3 ---
+    // --- Member List Rendering (Enhanced) ---
+    window.renderMemberList = () => {
+        const head = document.getElementById('memberListHead'), body = document.getElementById('memberListBody');
+        const arrow = window.currentSort.direction === 'asc' ? '↑' : '↓';
+        head.innerHTML = `<tr><th onclick="setSort('Name')">ชื่อ/คลาส ${window.currentSort.key==='Name'?arrow:''}</th><th onclick="setSort('TotalPlayed')">เกม ${window.currentSort.key==='TotalPlayed'?arrow:''}</th><th onclick="setSort('WinRate')">Win% ${window.currentSort.key==='WinRate'?arrow:''}</th><th>แก้ไข</th><th>สถานะ</th></tr>`;
+        let html = "";
+        window.getSortedData(false).forEach(m => {
+            const isActive = m.Status === "Active";
+            html += `<tr>
+                <td>
+                    <div class="mem-info-wrap">
+                        <span><span class="status-dot ${isActive?'dot-active':'dot-off'}"></span><b>${m.Name}</b> <small class="${getTxtClass(m.Class)}">[${m.Class}]</small></span>
+                        <span class="mem-note-sub">${m.Note}</span>
+                    </div>
+                </td>
+                <td><b>${m.TotalPlayed}</b></td>
+                <td>${m.WinRate}%</td>
+                <td><button class="edit-text-btn" onclick="editMember('${m.id}')">แก้ไข</button></td>
+                <td style="width:65px;"><button class="btn-status ${isActive?'btn-out':'btn-in'}" onclick="quickStatusUpdate('${m.Name}','${isActive?'checkout':'undo'}')">${isActive?'ออก':'เข้า'}</button></td>
+            </tr>`;
+        });
+        body.innerHTML = html;
+    };
+
     window.setSort = (key, fromModal = false) => {
         if (window.currentSort.key === key) window.currentSort.direction = window.currentSort.direction === 'asc' ? 'desc' : 'asc';
         else { window.currentSort.key = key; window.currentSort.direction = 'desc'; }
@@ -422,20 +418,15 @@
         });
     };
 
-    window.renderMemberList = () => {
-        const head = document.getElementById('memberListHead'), body = document.getElementById('memberListBody');
-        const arrow = window.currentSort.direction === 'asc' ? '↑' : '↓';
-        head.innerHTML = `<tr><th onclick="setSort('Name')">ชื่อ ${window.currentSort.key==='Name'?arrow:''}</th><th onclick="setSort('Class')">คลาส ${window.currentSort.key==='Class'?arrow:''}</th><th onclick="setSort('TotalPlayed')">เกม ${window.currentSort.key==='TotalPlayed'?arrow:''}</th><th onclick="setSort('WinRate')">Win% ${window.currentSort.key==='WinRate'?arrow:''}</th><th>สถานะ</th></tr>`;
-        let html = "";
-        window.getSortedData(false).forEach(m => {
-            const isActive = m.Status === "Active";
-            html += `<tr><td><span class="status-dot ${isActive?'dot-active':'dot-off'}"></span><b>${m.Name}</b></td><td class="${getTxtClass(m.Class)}">${m.Class}</td><td><b>${m.TotalPlayed}</b></td><td>${m.WinRate}%</td><td><button class="btn-status ${isActive?'btn-out':'btn-in'}" onclick="quickStatusUpdate('${m.Name}','${isActive?'checkout':'undo'}')">${isActive?'ออก':'เข้า'}</button></td></tr>`;
-        });
-        body.innerHTML = html;
+    window.updateDash = () => { 
+        if(document.getElementById('stat-matches')) {
+            document.getElementById('stat-matches').innerText = window.fireMatches.length; 
+            document.getElementById('stat-active').innerText = window.fireMembers.filter(m=>m.status==="Active").length; 
+            document.getElementById('stat-total').innerText = window.fireMembers.length; 
+        }
     };
-
-    window.updateDash = () => { document.getElementById('stat-matches').innerText = window.fireMatches.length; document.getElementById('stat-active').innerText = window.fireMembers.filter(m=>m.status==="Active").length; document.getElementById('stat-total').innerText = window.fireMembers.length; };
     window.showPage = (n) => { document.querySelectorAll('.page').forEach((p,i) => p.classList.toggle('active', i+1===n)); document.querySelectorAll('.nav-item').forEach((p,i) => p.classList.toggle('active', i+1===n)); if(n===1) renderMemberList(); if(n===2) renderMatchHistoryStrict(); };
+    window.toggleHideSaved = () => { window.hideSavedMatches = !window.hideSavedMatches; document.getElementById('toggleHideBtn').innerText = window.hideSavedMatches ? "👁️ แสดงทั้งหมด" : "👁️ ซ่อนที่จบแล้ว"; renderMatchHistoryStrict(); };
     window.openStats = () => { document.getElementById('statsModal').style.display="flex"; const head = document.getElementById('statsListHead'); const arrow = window.currentSort.direction === 'asc' ? '↑' : '↓'; head.innerHTML = `<tr><th style="text-align:left;" onclick="setSort('Name', true)">ชื่อ ${window.currentSort.key==='Name'?arrow:''}</th><th onclick="setSort('Class', true)">คลาส ${window.currentSort.key==='Class'?arrow:''}</th><th onclick="setSort('TotalPlayed', true)">เกม ${window.currentSort.key==='TotalPlayed'?arrow:''}</th><th onclick="setSort('WinRate', true)">Win% ${window.currentSort.key==='WinRate'?arrow:''}</th></tr>`; let html = ""; window.getSortedData(true).forEach(m => { html += `<tr><td><b>${m.Name}</b></td><td class="${getTxtClass(m.Class)}">${m.Class}</td><td><b>${m.TotalPlayed}</b></td><td>${m.WinRate}%</td></tr>`; }); document.getElementById('miniStatsTableBody').innerHTML = html; };
     window.closeStats = () => document.getElementById('statsModal').style.display="none";
     window.openDeleteModal = (t) => { window.deleteTarget=t; document.getElementById('deleteConfirmInput').value=""; document.getElementById('btnConfirmDelete').disabled=true; document.getElementById('deleteModal').style.display="flex"; };
