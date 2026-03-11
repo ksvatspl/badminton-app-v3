@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Badminton Hub Pro (V4.8 - Smart Sorting)</title>
+    <title>Badminton Hub Pro (V4.9 - Interactive Sorting)</title>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -17,7 +17,6 @@
         .container { padding: 10px; max-width: 600px; margin: auto; }
         .page { display: none; } .page.active { display: block; }
         .card { background: var(--bg-card); border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); position: relative; }
-        .card.hidden-match { display: none; }
         
         .dash-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 20px; }
         .dash-item { background: #36393f; padding: 12px 5px; border-radius: 10px; text-align: center; border: 1px solid var(--border); }
@@ -44,10 +43,15 @@
         .btn-choice.selected { background: rgba(67, 181, 129, 0.2); border-color: var(--accent); color: var(--accent); }
         .btn-saved-compact { background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--accent); padding: 8px; font-size: 0.85rem; border-radius: 8px; width: 100%; text-align: center; margin-top: 5px; font-weight: bold; }
         .btn-edit-link { background: transparent; border: none; color: var(--warning); font-size: 0.75rem; text-decoration: underline; margin-top: 8px; display: none; width: 100%; cursor: pointer; }
+        
+        /* Table Sorting UI */
         .m-table { width: 100%; border-collapse: collapse; }
-        .m-table th { color: var(--text-dim); font-size: 0.7rem; padding: 10px 4px; border-bottom: 1px solid var(--border); text-align: center; }
+        .m-table th { color: var(--text-dim); font-size: 0.7rem; padding: 10px 4px; border-bottom: 1px solid var(--border); text-align: center; cursor: pointer; user-select: none; }
+        .m-table th:hover { color: var(--accent); }
+        .m-table th.sort-active { color: var(--accent); text-decoration: underline; }
         .m-table td { padding: 12px 4px; border-bottom: 1px solid #36393f; font-size: 0.9rem; text-align: center; }
         .m-table th:first-child, .m-table td:first-child { text-align: left; padding-left: 10px; }
+        
         .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
         .dot-active { background: var(--accent); box-shadow: 0 0 5px var(--accent); } .dot-off { background: var(--danger); }
         .match-grid { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: center; margin-bottom: 10px; }
@@ -56,7 +60,7 @@
         .nav-item { flex: 1; text-align: center; color: var(--text-dim); cursor: pointer; font-size: 0.8rem; }
         .nav-item.active { color: var(--accent); font-weight: bold; }
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); align-items: center; justify-content: center; }
-        .modal-content { background: var(--bg-card); border-radius: 15px; width: 90%; max-width: 450px; max-height: 85vh; overflow: hidden; display: flex; flex-direction: column; }
+        .modal-content { background: var(--bg-card); border-radius: 15px; width: 95%; max-width: 450px; max-height: 85vh; overflow: hidden; display: flex; flex-direction: column; }
     </style>
 </head>
 <body>
@@ -74,7 +78,15 @@
         </div>
         <div class="card" style="padding: 5px;">
             <table class="m-table">
-                <thead><tr><th>ชื่อ</th><th>คลาส</th><th>เกม</th><th>Win%</th><th>สถานะ</th></tr></thead>
+                <thead id="memberTableHead">
+                    <tr>
+                        <th onclick="toggleSort('manage', 'Name')">ชื่อ <span id="sort-manage-Name"></span></th>
+                        <th onclick="toggleSort('manage', 'ClassWeight')">คลาส <span id="sort-manage-ClassWeight"></span></th>
+                        <th onclick="toggleSort('manage', 'TotalPlayed')">เกม <span id="sort-manage-TotalPlayed"></span></th>
+                        <th onclick="toggleSort('manage', 'WinRate')">Win% <span id="sort-manage-WinRate"></span></th>
+                        <th>สถานะ</th>
+                    </tr>
+                </thead>
                 <tbody id="memberListBody"></tbody>
             </table>
         </div>
@@ -118,7 +130,19 @@
 
 <!-- Modals -->
 <div id="deleteModal" class="modal"><div class="modal-content"><div class="modal-body" style="text-align:center; padding:20px;"><h3 style="color:var(--danger);">⚠️ ยืนยันการลบ</h3><p>พิมพ์ <strong>delete</strong> เพื่อล้างข้อมูล</p><input type="text" id="deleteConfirmInput" onkeyup="checkDeleteInput()" style="text-align:center;"><button class="btn-main" id="btnConfirmDelete" onclick="executeDelete()" disabled style="background:var(--danger); margin-bottom:10px;">ยืนยันลบทั้งหมด</button><button class="btn-main" style="background:#4f545c;" onclick="closeDeleteModal()">ยกเลิก</button></div></div></div>
-<div id="statsModal" class="modal"><div class="modal-content"><div style="padding:15px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;"><h3 style="margin:0; color:var(--accent);">📊 สถิติเกม</h3><span style="font-size:24px; cursor:pointer; color:var(--text-dim);" onclick="closeStats()">&times;</span></div><div style="overflow-y:auto; padding:10px;"><table class="m-table"><thead><tr><th style="text-align:left;">ชื่อ</th><th>คลาส</th><th>เกม</th><th>Win%</th></tr></thead><tbody id="miniStatsTableBody"></tbody></table></div><div style="padding:10px;"><button class="btn-main" onclick="closeStats()">ปิด</button></div></div></div>
+<div id="statsModal" class="modal"><div class="modal-content"><div style="padding:15px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;"><h3 style="margin:0; color:var(--accent);">📊 สถิติเกม</h3><span style="font-size:24px; cursor:pointer; color:var(--text-dim);" onclick="closeStats()">&times;</span></div><div style="overflow-y:auto; padding:10px;">
+    <table class="m-table">
+        <thead id="statsTableHead">
+            <tr>
+                <th style="text-align:left;" onclick="toggleSort('stats', 'Name')">ชื่อ <span id="sort-stats-Name"></span></th>
+                <th onclick="toggleSort('stats', 'ClassWeight')">คลาส <span id="sort-stats-ClassWeight"></span></th>
+                <th onclick="toggleSort('stats', 'TotalPlayed')">เกม <span id="sort-stats-TotalPlayed"></span></th>
+                <th onclick="toggleSort('stats', 'WinRate')">Win% <span id="sort-stats-WinRate"></span></th>
+            </tr>
+        </thead>
+        <tbody id="miniStatsTableBody"></tbody>
+    </table>
+</div><div style="padding:10px;"><button class="btn-main" onclick="closeStats()">ปิด</button></div></div></div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
@@ -129,6 +153,12 @@
     const db = getFirestore(app);
 
     window.allDataMemory = []; window.fireMembers = []; window.fireMatches = []; window.hideSavedMatches = false;
+
+    // Sorting State
+    window.sortState = {
+        manage: { key: 'Name', dir: 'asc' },
+        stats: { key: 'TotalPlayed', dir: 'desc' }
+    };
 
     onSnapshot(collection(db, "members"), (snapshot) => {
         window.fireMembers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -143,15 +173,26 @@
 
     function calculateStats() {
         let statsMap = {};
-        window.fireMembers.forEach(m => { statsMap[m.name] = { id: m.id, Name: m.name, Class: m.class, Status: m.status, TotalPlayed: 0, Win: 0 }; });
+        window.fireMembers.forEach(m => { 
+            statsMap[m.name] = { 
+                id: m.id, Name: m.name, Class: m.class, Status: m.status, 
+                TotalPlayed: 0, Win: 0, 
+                ClassWeight: window.getClassWeight(m.class),
+                WinRate: 0
+            }; 
+        });
         window.fireMatches.forEach(m => {
             const update = (p, isWin) => { if(p && statsMap[p]) { statsMap[p].TotalPlayed++; if(isWin) statsMap[p].Win++; } };
             if(m.winner === 'Team A') { update(m.p1a, true); update(m.p2a, true); update(m.p1b, false); update(m.p2b, false); }
             else if(m.winner === 'Team B') { update(m.p1a, false); update(m.p2a, false); update(m.p1b, true); update(m.p2b, true); }
         });
-        window.allDataMemory = Object.values(statsMap);
+        window.allDataMemory = Object.values(statsMap).map(m => {
+            m.WinRate = m.TotalPlayed > 0 ? (m.Win / m.TotalPlayed) : 0;
+            return m;
+        });
         renderMemberList();
         updateDash();
+        if(document.getElementById('statsModal').style.display === "flex") renderMiniStats();
     }
 
     window.registerMember = async function() {
@@ -199,9 +240,9 @@
     window.getDotEmoji = (cls) => {
         if(!cls) return "⚪";
         const c = cls.toUpperCase();
-        if(c.includes('P')) return "🟣"; if(c.includes('S')) return "🔴";
-        if(c.includes('N')) return "🟠"; if(c.includes('BG')) return "🔵";
-        return "🟢";
+        if(c.includes('P')) return "Purple"; if(c.includes('S')) return "Red";
+        if(c.includes('N')) return "Orange"; if(c.includes('BG')) return "Blue";
+        return "Green";
     };
 
     window.getPartnerCount = (p1, p2) => {
@@ -228,41 +269,93 @@
         return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
     };
 
-    // --- Render Logic ---
+    // --- Interactive Sorting Logic ---
+    window.toggleSort = (type, key) => {
+        const state = window.sortState[type];
+        if (state.key === key) {
+            state.dir = state.dir === 'asc' ? 'desc' : 'asc';
+        } else {
+            state.key = key;
+            state.dir = (key === 'Name' || key === 'ClassWeight') ? 'asc' : 'desc';
+        }
+        
+        if (type === 'manage') renderMemberList();
+        if (type === 'stats') renderMiniStats();
+    };
 
-    // [1] จัดการผู้เล่น: เรียง (สถานะ -> คลาส -> Win%)
+    function updateSortIcons(type) {
+        const state = window.sortState[type];
+        const headers = type === 'manage' ? ['Name', 'ClassWeight', 'TotalPlayed', 'WinRate'] : ['Name', 'ClassWeight', 'TotalPlayed', 'WinRate'];
+        headers.forEach(h => {
+            const iconSpan = document.getElementById(`sort-${type}-${h}`);
+            if(!iconSpan) return;
+            if (state.key === h) {
+                iconSpan.innerText = state.dir === 'asc' ? '▲' : '▼';
+                iconSpan.parentElement.classList.add('sort-active');
+            } else {
+                iconSpan.innerText = '';
+                iconSpan.parentElement.classList.remove('sort-active');
+            }
+        });
+    }
+
+    // [1] Render Member List (Lock Inactive at Bottom)
     window.renderMemberList = () => {
         const tbody = document.getElementById('memberListBody');
-        let html = "";
+        if(!tbody) return;
+        updateSortIcons('manage');
+        
+        const state = window.sortState.manage;
         const sorted = [...window.allDataMemory].sort((a, b) => {
+            // Priority 1: Inactive always at bottom
             if (a.Status !== b.Status) return a.Status === "Active" ? -1 : 1;
-            const weightA = window.getClassWeight(a.Class);
-            const weightB = window.getClassWeight(b.Class);
-            if (weightA !== weightB) return weightB - weightA;
-            const wrA = a.TotalPlayed > 0 ? (a.Win / a.TotalPlayed) : 0;
-            const wrB = b.TotalPlayed > 0 ? (b.Win / b.TotalPlayed) : 0;
-            return wrB - wrA;
+            
+            // Priority 2: Follow user chosen sort key
+            let valA = a[state.key];
+            let valB = b[state.key];
+            
+            if (typeof valA === 'string') {
+                return state.dir === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+            } else {
+                return state.dir === 'asc' ? valA - valB : valB - valA;
+            }
         });
 
+        let html = "";
         sorted.forEach(m => {
             const isActive = m.Status === "Active";
-            const wr = m.TotalPlayed > 0 ? Math.round((m.Win / m.TotalPlayed) * 100) : 0;
-            html += `<tr><td><span class="status-dot ${isActive?'dot-active':'dot-off'}"></span><b>${m.Name}</b></td><td class="${getTxtClass(m.Class)}">${m.Class}</td><td><b>${m.TotalPlayed}</b></td><td>${wr}%</td><td><button class="btn-status ${isActive?'btn-out':'btn-in'}" onclick="quickStatusUpdate('${m.Name}','${isActive?'checkout':'undo'}')">${isActive?'ออก':'เข้า'}</button></td></tr>`;
+            const wr = Math.round(m.WinRate * 100);
+            html += `<tr>
+                <td><span class="status-dot ${isActive?'dot-active':'dot-off'}"></span><b>${m.Name}</b></td>
+                <td class="${getTxtClass(m.Class)}">${m.Class}</td>
+                <td><b>${m.TotalPlayed}</b></td>
+                <td>${wr}%</td>
+                <td><button class="btn-status ${isActive?'btn-out':'btn-in'}" onclick="quickStatusUpdate('${m.Name}','${isActive?'checkout':'undo'}')">${isActive?'ออก':'เข้า'}</button></td>
+            </tr>`;
         });
         tbody.innerHTML = html;
     };
 
-    // [2] สถิติย่อ: เรียงตามจำนวนเกมที่เล่น (ใครแบกสนามอยู่บน)
-    window.openStats = () => {
-        document.getElementById('statsModal').style.display = "flex";
-        let html = "";
-        const statsSorted = [...window.allDataMemory].sort((a, b) => {
-            if (b.TotalPlayed !== a.TotalPlayed) return b.TotalPlayed - a.TotalPlayed;
-            return window.getClassWeight(b.Class) - window.getClassWeight(a.Class);
+    // [2] Render Mini Stats (Full Freedom Sorting)
+    window.renderMiniStats = () => {
+        const tbody = document.getElementById('miniStatsTableBody');
+        if(!tbody) return;
+        updateSortIcons('stats');
+        
+        const state = window.sortState.stats;
+        const sorted = [...window.allDataMemory].sort((a, b) => {
+            let valA = a[state.key];
+            let valB = b[state.key];
+            if (typeof valA === 'string') {
+                return state.dir === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+            } else {
+                return state.dir === 'asc' ? valA - valB : valB - valA;
+            }
         });
 
-        statsSorted.forEach(m => {
-            const wr = m.TotalPlayed ? Math.round((m.Win / m.TotalPlayed) * 100) : 0;
+        let html = "";
+        sorted.forEach(m => {
+            const wr = Math.round(m.WinRate * 100);
             html += `<tr>
                 <td style="text-align:left;"><b>${m.Name}</b></td>
                 <td class="${getTxtClass(m.Class)}">${m.Class}</td>
@@ -270,7 +363,12 @@
                 <td style="color:${wr >= 50 ? 'var(--accent)' : 'var(--text-dim)'}">${wr}%</td>
             </tr>`;
         });
-        document.getElementById('miniStatsTableBody').innerHTML = html;
+        tbody.innerHTML = html;
+    };
+
+    window.openStats = () => {
+        document.getElementById('statsModal').style.display = "flex";
+        renderMiniStats();
     };
 
     window.renderMatchHistoryStrict = () => {
@@ -335,7 +433,12 @@
 
         selectEl.innerHTML = '<option value="">- เลือก -</option>';
         window.allDataMemory.filter(m => m.Status === "Active").forEach(m => {
-            let text = `${window.getDotEmoji(m.Class)} ${m.Name} [${m.Class}]`;
+            let icon = "⚪";
+            if(m.Class.includes('P')) icon = "🟣"; else if(m.Class.includes('S')) icon = "🔴";
+            else if(m.Class.includes('N')) icon = "🟠"; else if(m.Class.includes('BG')) icon = "🔵";
+            else if(m.Class.includes('BB')) icon = "🟢";
+
+            let text = `${icon} ${m.Name} [${m.Class}]`;
             if(partnerVal && m.Name !== partnerVal) {
                 const pc = window.getPartnerCount(m.Name, partnerVal);
                 if(pc > 0) text += ` 🤝${pc}`;
