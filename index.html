@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Badminton Hub Stable</title>
+    <title>Badminton Hub Pro (V4.6 - Full Restoration)</title>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -11,205 +11,410 @@
             --text-dim: #b9bbbe; --accent: #43b581; --danger: #f04747; --border: #40444b; --warning: #faa61a;
             --cls-p: #ff66b2; --cls-s: #ff4d4d; --cls-n: #ffaa00; --cls-bg: #33ccff; --cls-bb: #44ffaa;
         }
-        body { background-color: var(--bg-body); color: var(--text-main); font-family: 'Kanit', sans-serif; margin: 0; padding-bottom: 80px; }
-        .page-header { position: sticky; top: 0; background: var(--bg-body); z-index: 100; padding: 15px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+        body { background-color: var(--bg-body); color: var(--text-main); font-family: 'Kanit', sans-serif; margin: 0; padding-bottom: 90px; }
+        .page-header { position: sticky; top: 0; background-color: var(--bg-body); z-index: 100; padding: 15px; border-bottom: 1px solid var(--border); height: 60px; box-sizing: border-box; display: flex; align-items: center; justify-content: space-between; }
+        .page-header h2 { border-left: 4px solid var(--accent); padding-left: 10px; margin: 0; font-size: 1.1rem; }
         .container { padding: 10px; max-width: 600px; margin: auto; }
         .page { display: none; } .page.active { display: block; }
-        .card { background: var(--bg-card); border-radius: 12px; padding: 15px; margin-bottom: 15px; position: relative; border: 1px solid var(--border); }
-        .game-label { position: absolute; top: -10px; right: 15px; background: var(--accent); color: white; padding: 2px 10px; border-radius: 10px; font-size: 0.75rem; font-weight: bold; }
-        select, input { width: 100%; padding: 12px; margin-bottom: 10px; background: #202225; border: 1px solid var(--border); color: white; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
-        .p-select { border-left: 6px solid #40444b; transition: 0.2s; }
+        .card { background: var(--bg-card); border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); position: relative; }
+        .card.hidden-match { display: none; }
+        
+        /* Dashboard Stats */
+        .dash-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+        .dash-item { background: #36393f; padding: 12px 5px; border-radius: 10px; text-align: center; border: 1px solid var(--border); }
+        .dash-val { display: block; font-size: 1.3rem; font-weight: bold; color: var(--accent); }
+        .dash-label { font-size: 0.65rem; color: var(--text-dim); }
+
+        .game-label { position: absolute; top: -10px; right: 20px; background: var(--accent); color: white; padding: 2px 10px; border-radius: 10px; font-size: 0.7rem; font-weight: bold; }
+        .txt-p { color: var(--cls-p) !important; } .txt-s { color: var(--cls-s) !important; } 
+        .txt-n { color: var(--cls-n) !important; } .txt-bg { color: var(--cls-bg) !important; } 
+        .txt-bb { color: var(--cls-bb) !important; }
+        
+        select, input { width: 100%; padding: 12px; margin-bottom: 10px; background: #36393f; border: 1px solid var(--border); color: white; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
+        .p-select { margin-bottom: 8px; border-left: 5px solid transparent; }
+        
         .btn-main { width: 100%; padding: 14px; background: var(--accent); color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; }
-        .btn-group { display: flex; gap: 8px; margin-bottom: 10px; }
-        .btn-choice { flex: 1; padding: 10px; background: #202225; border: 1px solid var(--border); color: var(--text-dim); border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .btn-main:disabled { background: #4f545c; opacity: 0.6; cursor: not-allowed; }
+        
+        .btn-add-manual { width: 100%; padding: 15px; background: transparent; border: 2px dashed var(--border); color: var(--text-dim); border-radius: 12px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+
+        /* Status Buttons Fix */
+        .btn-status { border: none; border-radius: 6px; padding: 6px 4px; font-size: 0.7rem; font-weight: bold; cursor: pointer; width: 100%; }
+        .btn-out { background: rgba(240, 71, 71, 0.15); color: var(--danger); border: 1px solid var(--danger); }
+        .btn-in { background: rgba(67, 181, 129, 0.15); color: var(--accent); border: 1px solid var(--accent); }
+
+        .header-btns { display: flex; gap: 8px; }
+        .btn-mini { background: #5865f2; color: white; border: none; border-radius: 6px; padding: 6px 10px; font-size: 0.75rem; font-weight: bold; cursor: pointer; }
+        .btn-mini.toggle-active { background: var(--warning); color: #000; }
+
+        .btn-group { display: flex; gap: 10px; margin-bottom: 10px; }
+        .btn-choice { flex: 1; padding: 10px; background: #36393f; border: 1px solid var(--border); color: var(--text-dim); border-radius: 8px; cursor: pointer; font-weight: bold; }
         .btn-choice.selected { background: rgba(67, 181, 129, 0.2); border-color: var(--accent); color: var(--accent); }
+        
+        .btn-saved-compact { background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--accent); padding: 8px; font-size: 0.85rem; border-radius: 8px; width: 100%; text-align: center; margin-top: 5px; font-weight: bold; }
+        .btn-edit-link { background: transparent; border: none; color: var(--warning); font-size: 0.75rem; text-decoration: underline; margin-top: 8px; display: none; width: 100%; cursor: pointer; }
+        
         .m-table { width: 100%; border-collapse: collapse; }
-        .m-table td { padding: 12px 5px; border-bottom: 1px solid #36393f; text-align: center; }
+        .m-table th { color: var(--text-dim); font-size: 0.7rem; padding: 10px 4px; border-bottom: 1px solid var(--border); text-align: center; }
+        .m-table td { padding: 12px 4px; border-bottom: 1px solid #36393f; font-size: 0.9rem; text-align: center; }
+        .m-table th:first-child, .m-table td:first-child { text-align: left; padding-left: 10px; }
+        
+        .status-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; }
+        .dot-active { background: var(--accent); } .dot-off { background: var(--danger); }
+
         .match-grid { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: center; margin-bottom: 10px; }
-        .vs-text { color: var(--danger); font-weight: bold; }
-        .bottom-nav { position: fixed; bottom: 0; width: 100%; background: #202225; display: flex; border-top: 1px solid var(--border); padding: 10px 0; }
-        .nav-item { flex: 1; text-align: center; color: var(--text-dim); font-size: 0.8rem; cursor: pointer; }
+        .vs-text { color: var(--danger); font-weight: bold; text-align: center; }
+        .bottom-nav { position: fixed; bottom: 0; width: 100%; background: #202225; display: flex; border-top: 1px solid var(--border); padding: 10px 0; z-index: 200; }
+        .nav-item { flex: 1; text-align: center; color: var(--text-dim); cursor: pointer; font-size: 0.8rem; }
         .nav-item.active { color: var(--accent); font-weight: bold; }
-        .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; }
-        .dot-active { background: var(--accent); box-shadow: 0 0 5px var(--accent); }
-        .dot-off { background: var(--danger); }
-        .txt-p { color: var(--cls-p); } .txt-s { color: var(--cls-s); } .txt-n { color: var(--cls-n); } .txt-bg { color: var(--cls-bg); } .txt-bb { color: var(--cls-bb); }
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); align-items: center; justify-content: center; }
+        .modal-content { background: var(--bg-card); border-radius: 15px; width: 90%; max-width: 450px; max-height: 85vh; overflow: hidden; display: flex; flex-direction: column; }
     </style>
 </head>
 <body>
 
 <div id="page1" class="page active">
-    <div class="page-header"><h2>👥 สมาชิก</h2></div>
+    <div class="page-header"><h2>👥 จัดการผู้เล่น</h2></div>
     <div class="container">
         <div class="card">
             <input type="text" id="mem_name" placeholder="ชื่อเล่น">
             <select id="mem_class">
-                <option value="BB">BB</option><option value="BG">BG</option><option value="N">N</option><option value="S">S</option><option value="P">P</option>
+                <option value="BB">BB</option><option value="BB+">BB+</option><option value="BG">BG</option><option value="BG+">BG+</option><option value="N">N</option><option value="N+">N+</option><option value="S">S</option><option value="S+">S+</option><option value="P">P</option>
             </select>
-            <button class="btn-main" onclick="addMember()">เพิ่มสมาชิก</button>
+            <input type="text" id="mem_note" placeholder="หมายเหตุ">
+            <button class="btn-main" onclick="registerMember()">+ เพิ่มสมาชิก</button>
         </div>
-        <div class="card" style="padding:0">
-            <table class="m-table"><tbody id="memberList"></tbody></table>
+        <div class="card" style="padding: 5px;">
+            <table class="m-table">
+                <thead><tr><th>ชื่อ</th><th>คลาส</th><th>เกม</th><th>Win%</th><th>สถานะ</th></tr></thead>
+                <tbody id="memberListBody"></tbody>
+            </table>
         </div>
     </div>
 </div>
 
 <div id="page2" class="page">
-    <div class="page-header"><h2>🏸 จดผล</h2></div>
-    <div class="container">
-        <div class="card" id="inputCard">
-            <div class="match-grid">
-                <div><select class="p-select" id="p1a" onchange="updSel(this)"></select><select class="p-select" id="p2a" onchange="updSel(this)"></select></div>
-                <div class="vs-text">VS</div>
-                <div><select class="p-select" id="p1b" onchange="updSel(this)"></select><select class="p-select" id="p2b" onchange="updSel(this)"></select></div>
-            </div>
-            <div class="btn-group" id="winnerGroup">
-                <button class="btn-choice" onclick="setWinner('Team A', this)">A ชนะ</button>
-                <button class="btn-choice" onclick="setWinner('Team B', this)">B ชนะ</button>
-            </div>
-            <button class="btn-main" onclick="saveMatch()">บันทึกผลการแข่งขัน</button>
+    <div class="page-header">
+        <h2>🏸 จดผล</h2>
+        <div class="header-btns">
+            <button id="toggleHideBtn" onclick="toggleHideSaved()" class="btn-mini">👁️ ซ่อนที่จบแล้ว</button>
+            <button onclick="openStats()" class="btn-mini">📊 สถิติ</button>
         </div>
-        <div id="matchHistory"></div>
+    </div>
+    <div class="container">
+        <div id="matchContainer"></div>
+        <button id="btnAddManual" class="btn-add-manual" onclick="addNewManualBox()">+ เพิ่มเกมใหม่ (Manual)</button>
+    </div>
+</div>
+
+<div id="page3" class="page">
+    <div class="page-header"><h2>⚙️ ตั้งค่า</h2></div>
+    <div class="container">
+        <div class="dash-grid">
+            <div class="dash-item"><span class="dash-val" id="stat-matches">0</span><span class="dash-label">แมตช์</span></div>
+            <div class="dash-item"><span class="dash-val" id="stat-active">0</span><span class="dash-label">เล่นอยู่</span></div>
+            <div class="dash-item"><span class="dash-val" id="stat-total">0</span><span class="dash-label">ทั้งหมด</span></div>
+        </div>
+        <div class="card" style="text-align: center;">
+            <button class="btn-main" style="background:var(--warning); color:#000; margin-bottom:15px;" onclick="openDeleteModal('matches')">🗑️ ลบแมตช์ทั้งหมด</button>
+            <button class="btn-main" style="background:var(--danger);" onclick="openDeleteModal('members')">🗑️ ลบสมาชิกทั้งหมด</button>
+        </div>
     </div>
 </div>
 
 <nav class="bottom-nav">
     <div class="nav-item active" onclick="showPage(1)">จัดการ</div>
     <div class="nav-item" onclick="showPage(2)">จดผล</div>
+    <div class="nav-item" onclick="showPage(3)">ตั้งค่า</div>
 </nav>
+
+<div id="deleteModal" class="modal">
+    <div class="modal-content" style="max-height: 300px; width: 85%;">
+        <div class="modal-body" style="text-align: center; padding: 20px;">
+            <h3 style="color:var(--danger);">⚠️ ยืนยันการลบ</h3>
+            <p style="color: var(--text-dim); font-size: 0.85rem;">พิมพ์ <strong>delete</strong> เพื่อล้างข้อมูล</p>
+            <input type="text" id="deleteConfirmInput" onkeyup="checkDeleteInput()" style="text-align: center;">
+            <button class="btn-main" id="btnConfirmDelete" onclick="executeDelete()" disabled style="background:var(--danger); margin-bottom:10px;">ยืนยันลบทั้งหมด</button>
+            <button class="btn-main" style="background:#4f545c;" onclick="closeDeleteModal()">ยกเลิก</button>
+        </div>
+    </div>
+</div>
+
+<div id="statsModal" class="modal">
+    <div class="modal-content">
+        <div style="padding: 15px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="margin:0; color:var(--accent);">📊 สถิติเกม</h3>
+            <span style="font-size: 24px; cursor: pointer; color: var(--text-dim);" onclick="closeStats()">&times;</span>
+        </div>
+        <div style="overflow-y: auto; padding: 10px;">
+            <table class="m-table"><thead><tr><th style="text-align:left;">ชื่อ</th><th>คลาส</th><th>เกม</th><th>Win%</th></tr></thead><tbody id="miniStatsTableBody"></tbody></table>
+        </div>
+        <div style="padding: 10px;"><button class="btn-main" onclick="closeStats()">ปิด</button></div>
+    </div>
+</div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, updateDoc, doc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, updateDoc, doc, serverTimestamp, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-    const firebaseConfig = { apiKey: "AIzaSyAM_cIiH6GR3N47H3Ydtma7fhSI_Hvk3Gk", authDomain: "badminton-hub-99b35.firebaseapp.com", projectId: "badminton-hub-99b35", storageBucket: "badminton-hub-99b35.firebasestorage.app", messagingSenderId: "488493837313", appId: "1:488493837313:web:054096949a9ed4db7f6400" };
+    const firebaseConfig = {
+        apiKey: "AIzaSyAM_cIiH6GR3N47H3Ydtma7fhSI_Hvk3Gk",
+        authDomain: "badminton-hub-99b35.firebaseapp.com",
+        projectId: "badminton-hub-99b35",
+        storageBucket: "badminton-hub-99b35.firebasestorage.app",
+        messagingSenderId: "488493837313",
+        appId: "1:488493837313:web:054096949a9ed4db7f6400"
+    };
+
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    let members = []; let matches = []; let selectedWinner = "";
+    window.allDataMemory = [];
+    window.fireMembers = [];
+    window.fireMatches = [];
+    window.hideSavedMatches = false;
 
-    // Sync Members
-    onSnapshot(collection(db, "members"), (snap) => {
-        members = snap.docs.map(d => ({id: d.id, ...d.data()}));
-        renderMembers();
-        fillDropdowns();
+    onSnapshot(collection(db, "members"), (snapshot) => {
+        window.fireMembers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        calculateStats();
     });
 
-    // Sync Matches
-    onSnapshot(query(collection(db, "matches"), orderBy("time", "desc")), (snap) => {
-        matches = snap.docs.map(d => ({id: d.id, ...d.data()}));
-        renderMatches();
+    onSnapshot(query(collection(db, "matches"), orderBy("timestamp", "asc")), (snapshot) => {
+        window.fireMatches = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        calculateStats();
+        if(document.getElementById('page2').classList.contains('active')) {
+            renderMatchHistoryStrict();
+        }
     });
 
-    window.addMember = async () => {
-        const name = document.getElementById('mem_name').value;
-        const cls = document.getElementById('mem_class').value;
-        if(!name) return;
-        await addDoc(collection(db, "members"), { name, class: cls, status: "Active" });
-        document.getElementById('mem_name').value = "";
-    };
-
-    window.toggleStatus = async (id, cur) => {
-        await updateDoc(doc(db, "members", id), { status: cur === "Active" ? "Inactive" : "Active" });
-    };
-
-    window.setWinner = (val, btn) => {
-        selectedWinner = val;
-        document.querySelectorAll('.btn-choice').forEach(b => b.classList.remove('selected'));
-        btn.classList.add('selected');
-    };
-
-    window.saveMatch = async () => {
-        const data = {
-            p1a: document.getElementById('p1a').value, p2a: document.getElementById('p2a').value,
-            p1b: document.getElementById('p1b').value, p2b: document.getElementById('p2b').value,
-            winner: selectedWinner, time: Date.now()
-        };
-        if(!data.p1a || !data.p2a || !data.p1b || !data.p2b || !selectedWinner) return alert("กรอกข้อมูลให้ครบ");
-        await addDoc(collection(db, "matches"), data);
-        // Reset Form
-        selectedWinner = "";
-        document.querySelectorAll('.btn-choice').forEach(b => b.classList.remove('selected'));
-    };
-
-    function renderMembers() {
-        const list = document.getElementById('memberList');
-        list.innerHTML = members.map(m => {
-            const cls = `txt-${m.class.toLowerCase()}`;
-            const dot = m.status === "Active" ? "dot-active" : "dot-off";
-            return `<tr><td style="text-align:left; padding-left:15px;"><span class="status-dot ${dot}"></span>${m.name}</td>
-                    <td class="${cls}">${m.class}</td>
-                    <td><button onclick="toggleStatus('${m.id}','${m.status}')" style="border:none; background:none; color:var(--text-dim); cursor:pointer;">${m.status==='Active'?'🔴 ออก':'🟢 เข้า'}</button></td></tr>`;
-        }).join('');
-    }
-
-    function fillDropdowns() {
-        const active = members.filter(m => m.status === "Active");
-        const ids = ['p1a', 'p2a', 'p1b', 'p2b'];
-        ids.forEach(id => {
-            const el = document.getElementById(id);
-            const cur = el.value;
-            let h = `<option value="">- เลือก -</option>`;
-            active.forEach(m => {
-                const partnerName = getPartnerId(id);
-                const count = getPartnerCount(m.name, partnerName);
-                const partnerTag = count > 0 ? ` 🤝${count}` : "";
-                h += `<option value="${m.name}" ${m.name===cur?'selected':''}>${m.name} [${m.class}]${partnerTag}</option>`;
-            });
-            el.innerHTML = h;
-            updSel(el);
+    function calculateStats() {
+        let statsMap = {};
+        window.fireMembers.forEach(m => { statsMap[m.name] = { id: m.id, Name: m.name, Class: m.class, Status: m.status, TotalPlayed: 0, Win: 0, Loss: 0 }; });
+        window.fireMatches.forEach(m => {
+            const update = (p, isWin) => { if(p && statsMap[p]) { statsMap[p].TotalPlayed++; if(isWin) statsMap[p].Win++; else statsMap[p].Loss++; } };
+            if(m.winner === 'Team A') { update(m.p1a, true); update(m.p2a, true); update(m.p1b, false); update(m.p2b, false); }
+            else if(m.winner === 'Team B') { update(m.p1a, false); update(m.p2a, false); update(m.p1b, true); update(m.p2b, true); }
         });
+        window.allDataMemory = Object.values(statsMap);
+        renderMemberList();
+        updateDash();
     }
 
-    function getPartnerId(id) {
-        if(id==='p1a') return document.getElementById('p2a').value;
-        if(id==='p2a') return document.getElementById('p1a').value;
-        if(id==='p1b') return document.getElementById('p2b').value;
-        if(id==='p2b') return document.getElementById('p1b').value;
-        return "";
-    }
+    window.registerMember = async function() {
+        const n = document.getElementById('mem_name'), c = document.getElementById('mem_class'), nt = document.getElementById('mem_note');
+        if(!n.value.trim()) return;
+        await addDoc(collection(db, "members"), { name: n.value.trim(), class: c.value, note: nt.value, status: "Active" });
+        n.value = ""; nt.value = "";
+    };
 
-    function getPartnerCount(p1, p2) {
-        if(!p1 || !p2) return 0;
-        return matches.filter(m => 
-            ((m.p1a===p1 && m.p2a===p2) || (m.p1a===p2 && m.p2a===p1)) ||
-            ((m.p1b===p1 && m.p2b===p2) || (m.p1b===p2 && m.p2b===p1))
-        ).length;
-    }
+    window.saveMatchBox = async function(num) {
+        const box = document.getElementById(`match-box-${num}`);
+        const btn = box.querySelector('.btn-main');
+        const winner = box.querySelector('.btn-group').dataset.winner;
+        const players = Array.from(box.querySelectorAll('.p-select')).map(s => s.value);
+        if(players.includes("") || !winner) return alert("เลือกคนและทีมชนะให้ครบครับ!");
+        
+        btn.disabled = true; btn.innerText = "กำลังบันทึก...";
+        delete box.dataset.editing;
+        const data = { p1a: players[0], p2a: players[1], p1b: players[2], p2b: players[3], winner, timestamp: serverTimestamp() };
+        try {
+            if(box.dataset.docid) await updateDoc(doc(db, "matches", box.dataset.docid), data);
+            else await addDoc(collection(db, "matches"), data);
+        } catch(e) { btn.disabled = false; btn.innerText = "บันทึกผล"; }
+    };
 
-    window.updSel = (el) => {
-        const m = members.find(i => i.name === el.value);
-        if(m) {
-            const color = getComputedStyle(document.documentElement).getPropertyValue(`--cls-${m.class.toLowerCase()}`);
-            el.style.borderLeftColor = color;
-        } else {
-            el.style.borderLeftColor = "#40444b";
-        }
-        if(el.id) { // If it's the main input, refresh others for partner count
-             const ids = ['p1a', 'p2a', 'p1b', 'p2b'];
-             if(ids.includes(el.id)) {
-                 // Prevent infinite loop by not calling fillDropdowns directly
-             }
+    window.quickStatusUpdate = async function(name, action) {
+        const m = window.fireMembers.find(i => i.name === name);
+        if(m) await updateDoc(doc(db, "members", m.id), { status: action === "checkout" ? "Inactive" : "Active" });
+    };
+
+    window.executeDelete = async function() {
+        const snapshot = await getDocs(collection(db, window.deleteTarget));
+        await Promise.all(snapshot.docs.map(d => deleteDoc(doc(db, window.deleteTarget, d.id))));
+        closeDeleteModal();
+    };
+</script>
+
+<script>
+    window.getDotEmoji = (cls) => {
+        if(!cls) return "⚪";
+        if(cls.includes('P')) return "🟣"; if(cls.includes('S')) return "🔴";
+        if(cls.includes('N')) return "🟠"; if(cls.includes('BG')) return "🔵";
+        return "🟢";
+    };
+
+    window.getPartnerCount = (p1, p2) => {
+        let count = 0;
+        window.fireMatches.forEach(m => {
+            if((m.p1a===p1 && m.p2a===p2) || (m.p1a===p2 && m.p2a===p1)) count++;
+            if((m.p1b===p1 && m.p2b===p2) || (m.p1b===p2 && m.p2b===p1)) count++;
+        });
+        return count;
+    };
+
+    window.getTxtClass = (cls) => {
+        if(!cls) return ""; cls = cls.toUpperCase();
+        if(cls.includes('P')) return "txt-p"; if(cls.includes('S')) return "txt-s";
+        if(cls.includes('N')) return "txt-n"; if(cls.includes('BG')) return "txt-bg";
+        return "txt-bb";
+    };
+
+    window.renderMemberList = () => {
+        const tbody = document.getElementById('memberListBody');
+        let html = "";
+        const sorted = [...window.allDataMemory].sort((a,b) => (a.Status==="Active" ? -1:1) || (b.TotalPlayed - a.TotalPlayed));
+        sorted.forEach(m => {
+            const isActive = m.Status === "Active";
+            const wr = m.TotalPlayed > 0 ? Math.round((m.Win/m.TotalPlayed)*100) : 0;
+            html += `<tr><td><span class="status-dot ${isActive?'dot-active':'dot-off'}"></span><b>${m.Name}</b></td><td class="${getTxtClass(m.Class)}">${m.Class}</td><td><b>${m.TotalPlayed}</b></td><td>${wr}%</td><td><button class="btn-status ${isActive?'btn-out':'btn-in'}" onclick="quickStatusUpdate('${m.Name}','${isActive?'checkout':'undo'}')">${isActive?'ออก':'เข้า'}</button></td></tr>`;
+        });
+        tbody.innerHTML = html;
+    };
+
+    window.renderMatchHistoryStrict = () => {
+        const container = document.getElementById('matchContainer');
+        const matches = window.fireMatches;
+        
+        matches.forEach((m, index) => {
+            const num = index + 1;
+            let box = document.getElementById(`match-box-${num}`);
+            if(!box) { box = createMatchElement(num); container.appendChild(box); }
+            box.dataset.docid = m.id;
+            
+            if(window.hideSavedMatches && !box.dataset.editing) box.classList.add('hidden-match');
+            else box.classList.remove('hidden-match');
+
+            if(box.dataset.editing === "true") return;
+
+            const selects = box.querySelectorAll('.p-select');
+            const players = [m.p1a, m.p2a, m.p1b, m.p2b];
+            selects.forEach((sel, i) => {
+                sel.innerHTML = `<option value="${players[i]}">${players[i]}</option>`;
+                sel.value = players[i]; sel.disabled = true;
+                applyColorManual(sel, players[i]);
+            });
+
+            const btnGroup = box.querySelector('.btn-group');
+            btnGroup.dataset.winner = m.winner;
+            btnGroup.querySelectorAll('.btn-choice').forEach(b => {
+                b.classList.toggle('selected', (m.winner==='Team A' && b.innerText==='A ชนะ') || (m.winner==='Team B' && b.innerText==='B ชนะ'));
+                b.disabled = true;
+            });
+
+            const mainBtn = box.querySelector('.btn-main');
+            if(mainBtn) {
+                const savedDiv = document.createElement('div'); savedDiv.className = 'btn-saved-compact';
+                savedDiv.innerText = '✓ บันทึกผลแล้ว'; mainBtn.replaceWith(savedDiv);
+            }
+            box.querySelector('.btn-edit-link').style.display = 'block';
+        });
+
+        // สร้างกล่องเปล่าถ้ายังไม่มี
+        if(container.querySelectorAll('.card:not([data-docid])').length === 0) {
+            addNewManualBox();
         }
     };
 
-    function renderMatches() {
-        const hist = document.getElementById('matchHistory');
-        hist.innerHTML = matches.map((m, idx) => `
-            <div class="card" style="opacity:0.8">
-                <div class="game-label">จบเกม</div>
-                <div class="match-grid">
-                    <div style="${m.winner==='Team A'?'color:var(--accent); font-weight:bold':''}">${m.p1a}<br>${m.p2a}</div>
-                    <div class="vs-text">VS</div>
-                    <div style="${m.winner==='Team B'?'color:var(--accent); font-weight:bold':''}">${m.p1b}<br>${m.p2b}</div>
-                </div>
-            </div>
-        `).join('');
-    }
+    window.addNewManualBox = () => {
+        const container = document.getElementById('matchContainer');
+        const nextNum = container.querySelectorAll('.card').length + 1;
+        const box = createMatchElement(nextNum);
+        container.appendChild(box);
+        box.querySelectorAll('.p-select').forEach(s => window.refreshSelectOptionsManual(s));
+    };
+
+    window.refreshSelectOptionsManual = (selectEl) => {
+        const curVal = selectEl.value;
+        const box = selectEl.closest('.card');
+        const role = selectEl.dataset.role;
+        const allSelectedInBox = Array.from(box.querySelectorAll('.p-select')).map(s => s.value).filter(v => v !== "" && v !== curVal);
+        
+        let partnerVal = "";
+        if(role==='p1a') partnerVal = box.querySelector('[data-role="p2a"]').value;
+        if(role==='p2a') partnerVal = box.querySelector('[data-role="p1a"]').value;
+        if(role==='p1b') partnerVal = box.querySelector('[data-role="p2b"]').value;
+        if(role==='p2b') partnerVal = box.querySelector('[data-role="p1b"]').value;
+
+        selectEl.innerHTML = '<option value="">- เลือก -</option>';
+        window.allDataMemory.filter(m => m.Status === "Active").forEach(m => {
+            if(allSelectedInBox.includes(m.Name)) return;
+            let text = `${window.getDotEmoji(m.Class)} ${m.Name} [${m.Class}]`;
+            if(partnerVal && m.Name !== partnerVal) {
+                const pc = window.getPartnerCount(m.Name, partnerVal);
+                if(pc > 0) text += ` 🤝${pc > 1 ? '×'+pc : ''}`;
+            }
+            const opt = document.createElement('option'); opt.value = m.Name; opt.text = text;
+            selectEl.appendChild(opt);
+        });
+        selectEl.value = curVal;
+        applyColorManual(selectEl, curVal);
+    };
+
+    window.applyColorManual = (el, name) => {
+        const m = window.allDataMemory.find(i => i.Name === name);
+        const colorClass = m ? getTxtClass(m.Class) : "";
+        el.style.borderLeftColor = colorClass ? getComputedStyle(document.documentElement).getPropertyValue('--cls-'+colorClass.split('-')[1]) : 'transparent';
+    };
+
+    window.handleSel = (el) => {
+        const box = el.closest('.card');
+        box.querySelectorAll('.p-select').forEach(s => window.refreshSelectOptionsManual(s));
+    };
+
+    window.createMatchElement = (num) => {
+        const div = document.createElement('div'); div.className = 'card'; div.id = `match-box-${num}`;
+        div.innerHTML = `<div class="game-label">เกมที่ ${num}</div><div class="match-grid"><div><select class="p-select" data-role="p1a" onchange="handleSel(this)"></select><select class="p-select" data-role="p2a" onchange="handleSel(this)"></select></div><div class="vs-text">VS</div><div><select class="p-select" data-role="p1b" onchange="handleSel(this)"></select><select class="p-select" data-role="p2b" onchange="handleSel(this)"></select></div></div><div class="btn-group"><button class="btn-choice" onclick="setWin(this,'Team A')">A ชนะ</button><button class="btn-choice" onclick="setWin(this,'Team B')">B ชนะ</button></div><button class="btn-main" onclick="saveMatchBox(${num})">บันทึกผล</button><button class="btn-edit-link" onclick="editMatch(${num})">แก้ไขข้อมูล</button>`;
+        return div;
+    };
+
+    window.setWin = (btn, team) => {
+        if(btn.disabled) return;
+        btn.parentElement.querySelectorAll('.btn-choice').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected'); btn.parentElement.dataset.winner = team;
+    };
+
+    window.toggleHideSaved = () => {
+        window.hideSavedMatches = !window.hideSavedMatches;
+        document.getElementById('toggleHideBtn').innerText = window.hideSavedMatches ? "👁️ แสดงทั้งหมด" : "👁️ ซ่อนที่จบแล้ว";
+        renderMatchHistoryStrict();
+    };
+
+    window.updateDash = () => {
+        document.getElementById('stat-matches').innerText = window.fireMatches.length;
+        document.getElementById('stat-active').innerText = window.fireMembers.filter(m=>m.status==="Active").length;
+        document.getElementById('stat-total').innerText = window.fireMembers.length;
+    };
 
     window.showPage = (n) => {
         document.querySelectorAll('.page').forEach((p,i) => p.classList.toggle('active', i+1===n));
-        document.querySelectorAll('.nav-item').forEach((v,i) => v.classList.toggle('active', i+1===n));
+        document.querySelectorAll('.nav-item').forEach((p,i) => p.classList.toggle('active', i+1===n));
+        if(n===2) renderMatchHistoryStrict();
+    };
+
+    window.openStats = () => {
+        document.getElementById('statsModal').style.display="flex";
+        let html = "";
+        [...window.allDataMemory].sort((a,b)=>b.TotalPlayed-a.TotalPlayed).forEach(m => {
+            html += `<tr><td><b>${m.Name}</b></td><td class="${getTxtClass(m.Class)}">${m.Class}</td><td><b>${m.TotalPlayed}</b></td><td>${m.TotalPlayed?Math.round((m.Win/m.TotalPlayed)*100):0}%</td></tr>`;
+        });
+        document.getElementById('miniStatsTableBody').innerHTML = html;
+    };
+    window.closeStats = () => document.getElementById('statsModal').style.display="none";
+    window.openDeleteModal = (t) => { window.deleteTarget=t; document.getElementById('deleteConfirmInput').value=""; document.getElementById('btnConfirmDelete').disabled=true; document.getElementById('deleteModal').style.display="flex"; };
+    window.closeDeleteModal = () => document.getElementById('deleteModal').style.display="none";
+    window.checkDeleteInput = () => document.getElementById('btnConfirmDelete').disabled = document.getElementById('deleteConfirmInput').value!=="delete";
+
+    window.editMatch = (num) => {
+        const box = document.getElementById(`match-box-${num}`);
+        box.dataset.editing = "true";
+        box.querySelectorAll('select, .btn-choice').forEach(el => el.disabled = false);
+        const saved = box.querySelector('.btn-saved-compact');
+        if(saved) {
+            const btn = document.createElement('button'); btn.className='btn-main'; btn.innerText='อัปเดตผล';
+            btn.onclick = () => saveMatchBox(num);
+            saved.replaceWith(btn);
+        }
+        box.querySelectorAll('.p-select').forEach(s => window.refreshSelectOptionsManual(s));
     };
 </script>
 </body>
