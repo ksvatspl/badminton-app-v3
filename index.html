@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Badminton Hub Pro (V4.9 - Interactive Sorting)</title>
+    <title>Badminton Hub Pro (V4.9 - Partner & Exclusion)</title>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -44,7 +44,6 @@
         .btn-saved-compact { background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--accent); padding: 8px; font-size: 0.85rem; border-radius: 8px; width: 100%; text-align: center; margin-top: 5px; font-weight: bold; }
         .btn-edit-link { background: transparent; border: none; color: var(--warning); font-size: 0.75rem; text-decoration: underline; margin-top: 8px; display: none; width: 100%; cursor: pointer; }
         
-        /* Table Sorting UI */
         .m-table { width: 100%; border-collapse: collapse; }
         .m-table th { color: var(--text-dim); font-size: 0.7rem; padding: 10px 4px; border-bottom: 1px solid var(--border); text-align: center; cursor: pointer; user-select: none; }
         .m-table th:hover { color: var(--accent); }
@@ -61,6 +60,7 @@
         .nav-item.active { color: var(--accent); font-weight: bold; }
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); align-items: center; justify-content: center; }
         .modal-content { background: var(--bg-card); border-radius: 15px; width: 95%; max-width: 450px; max-height: 85vh; overflow: hidden; display: flex; flex-direction: column; }
+        .hidden-match { display: none; }
     </style>
 </head>
 <body>
@@ -154,7 +154,6 @@
 
     window.allDataMemory = []; window.fireMembers = []; window.fireMatches = []; window.hideSavedMatches = false;
 
-    // Sorting State
     window.sortState = {
         manage: { key: 'Name', dir: 'asc' },
         stats: { key: 'TotalPlayed', dir: 'desc' }
@@ -237,14 +236,6 @@
         return weights[cls.toUpperCase()] || 0;
     };
 
-    window.getDotEmoji = (cls) => {
-        if(!cls) return "⚪";
-        const c = cls.toUpperCase();
-        if(c.includes('P')) return "Purple"; if(c.includes('S')) return "Red";
-        if(c.includes('N')) return "Orange"; if(c.includes('BG')) return "Blue";
-        return "Green";
-    };
-
     window.getPartnerCount = (p1, p2) => {
         if(!p1 || !p2) return 0;
         let count = 0;
@@ -269,7 +260,6 @@
         return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
     };
 
-    // --- Interactive Sorting Logic ---
     window.toggleSort = (type, key) => {
         const state = window.sortState[type];
         if (state.key === key) {
@@ -278,14 +268,13 @@
             state.key = key;
             state.dir = (key === 'Name' || key === 'ClassWeight') ? 'asc' : 'desc';
         }
-        
         if (type === 'manage') renderMemberList();
         if (type === 'stats') renderMiniStats();
     };
 
     function updateSortIcons(type) {
         const state = window.sortState[type];
-        const headers = type === 'manage' ? ['Name', 'ClassWeight', 'TotalPlayed', 'WinRate'] : ['Name', 'ClassWeight', 'TotalPlayed', 'WinRate'];
+        const headers = ['Name', 'ClassWeight', 'TotalPlayed', 'WinRate'];
         headers.forEach(h => {
             const iconSpan = document.getElementById(`sort-${type}-${h}`);
             if(!iconSpan) return;
@@ -299,69 +288,40 @@
         });
     }
 
-    // [1] Render Member List (Lock Inactive at Bottom)
     window.renderMemberList = () => {
         const tbody = document.getElementById('memberListBody');
         if(!tbody) return;
         updateSortIcons('manage');
-        
         const state = window.sortState.manage;
         const sorted = [...window.allDataMemory].sort((a, b) => {
-            // Priority 1: Inactive always at bottom
             if (a.Status !== b.Status) return a.Status === "Active" ? -1 : 1;
-            
-            // Priority 2: Follow user chosen sort key
-            let valA = a[state.key];
-            let valB = b[state.key];
-            
-            if (typeof valA === 'string') {
-                return state.dir === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
-            } else {
-                return state.dir === 'asc' ? valA - valB : valB - valA;
-            }
+            let valA = a[state.key], valB = b[state.key];
+            if (typeof valA === 'string') return state.dir === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+            return state.dir === 'asc' ? valA - valB : valB - valA;
         });
-
         let html = "";
         sorted.forEach(m => {
             const isActive = m.Status === "Active";
             const wr = Math.round(m.WinRate * 100);
-            html += `<tr>
-                <td><span class="status-dot ${isActive?'dot-active':'dot-off'}"></span><b>${m.Name}</b></td>
-                <td class="${getTxtClass(m.Class)}">${m.Class}</td>
-                <td><b>${m.TotalPlayed}</b></td>
-                <td>${wr}%</td>
-                <td><button class="btn-status ${isActive?'btn-out':'btn-in'}" onclick="quickStatusUpdate('${m.Name}','${isActive?'checkout':'undo'}')">${isActive?'ออก':'เข้า'}</button></td>
-            </tr>`;
+            html += `<tr><td><span class="status-dot ${isActive?'dot-active':'dot-off'}"></span><b>${m.Name}</b></td><td class="${getTxtClass(m.Class)}">${m.Class}</td><td><b>${m.TotalPlayed}</b></td><td>${wr}%</td><td><button class="btn-status ${isActive?'btn-out':'btn-in'}" onclick="quickStatusUpdate('${m.Name}','${isActive?'checkout':'undo'}')">${isActive?'ออก':'เข้า'}</button></td></tr>`;
         });
         tbody.innerHTML = html;
     };
 
-    // [2] Render Mini Stats (Full Freedom Sorting)
     window.renderMiniStats = () => {
         const tbody = document.getElementById('miniStatsTableBody');
         if(!tbody) return;
         updateSortIcons('stats');
-        
         const state = window.sortState.stats;
         const sorted = [...window.allDataMemory].sort((a, b) => {
-            let valA = a[state.key];
-            let valB = b[state.key];
-            if (typeof valA === 'string') {
-                return state.dir === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
-            } else {
-                return state.dir === 'asc' ? valA - valB : valB - valA;
-            }
+            let valA = a[state.key], valB = b[state.key];
+            if (typeof valA === 'string') return state.dir === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+            return state.dir === 'asc' ? valA - valB : valB - valA;
         });
-
         let html = "";
         sorted.forEach(m => {
             const wr = Math.round(m.WinRate * 100);
-            html += `<tr>
-                <td style="text-align:left;"><b>${m.Name}</b></td>
-                <td class="${getTxtClass(m.Class)}">${m.Class}</td>
-                <td><b>${m.TotalPlayed}</b></td>
-                <td style="color:${wr >= 50 ? 'var(--accent)' : 'var(--text-dim)'}">${wr}%</td>
-            </tr>`;
+            html += `<tr><td style="text-align:left;"><b>${m.Name}</b></td><td class="${getTxtClass(m.Class)}">${m.Class}</td><td><b>${m.TotalPlayed}</b></td><td style="color:${wr >= 50 ? 'var(--accent)' : 'var(--text-dim)'}">${wr}%</td></tr>`;
         });
         tbody.innerHTML = html;
     };
@@ -373,19 +333,14 @@
 
     window.renderMatchHistoryStrict = () => {
         const container = document.getElementById('matchContainer');
-        const matches = window.fireMatches;
-        
-        matches.forEach((m, index) => {
+        window.fireMatches.forEach((m, index) => {
             const num = index + 1;
             let box = document.getElementById(`match-box-${num}`);
             if(!box) { box = createMatchElement(num); container.appendChild(box); }
             box.dataset.docid = m.id;
-            
             if(window.hideSavedMatches && !box.dataset.editing) box.classList.add('hidden-match');
             else box.classList.remove('hidden-match');
-
             if(box.dataset.editing === "true") return;
-
             const selects = box.querySelectorAll('.p-select');
             const players = [m.p1a, m.p2a, m.p1b, m.p2b];
             selects.forEach((sel, i) => {
@@ -393,14 +348,12 @@
                 sel.value = players[i]; sel.disabled = true;
                 applyColorManual(sel, players[i]);
             });
-
             const btnGroup = box.querySelector('.btn-group');
             btnGroup.dataset.winner = m.winner;
             btnGroup.querySelectorAll('.btn-choice').forEach(b => {
                 b.classList.toggle('selected', (m.winner==='Team A' && b.innerText==='A ชนะ') || (m.winner==='Team B' && b.innerText==='B ชนะ'));
                 b.disabled = true;
             });
-
             const mainBtn = box.querySelector('.btn-main');
             if(mainBtn) {
                 const savedDiv = document.createElement('div'); savedDiv.className = 'btn-saved-compact';
@@ -408,7 +361,6 @@
             }
             box.querySelector('.btn-edit-link').style.display = 'block';
         });
-
         if(container.querySelectorAll('.card:not([data-docid])').length === 0) addNewManualBox();
     };
 
@@ -425,14 +377,24 @@
         const box = selectEl.closest('.card');
         const role = selectEl.dataset.role;
         
+        // 1. Get other selected players in this card to exclude them
+        const otherSelectedNames = Array.from(box.querySelectorAll('.p-select'))
+            .filter(s => s !== selectEl)
+            .map(s => s.value)
+            .filter(v => v !== "");
+
+        // 2. Identify partner for Partner Count display
         let partnerVal = "";
         if(role==='p1a') partnerVal = box.querySelector('[data-role="p2a"]').value;
-        if(role==='p2a') partnerVal = box.querySelector('[data-role="p1a"]').value;
-        if(role==='p1b') partnerVal = box.querySelector('[data-role="p2b"]').value;
-        if(role==='p2b') partnerVal = box.querySelector('[data-role="p1b"]').value;
+        else if(role==='p2a') partnerVal = box.querySelector('[data-role="p1a"]').value;
+        else if(role==='p1b') partnerVal = box.querySelector('[data-role="p2b"]').value;
+        else if(role==='p2b') partnerVal = box.querySelector('[data-role="p1b"]').value;
 
         selectEl.innerHTML = '<option value="">- เลือก -</option>';
         window.allDataMemory.filter(m => m.Status === "Active").forEach(m => {
+            // Exclude names already chosen in other slots of the SAME card
+            if (otherSelectedNames.includes(m.Name)) return;
+
             let icon = "⚪";
             if(m.Class.includes('P')) icon = "🟣"; else if(m.Class.includes('S')) icon = "🔴";
             else if(m.Class.includes('N')) icon = "🟠"; else if(m.Class.includes('BG')) icon = "🔵";
@@ -443,7 +405,8 @@
                 const pc = window.getPartnerCount(m.Name, partnerVal);
                 if(pc > 0) text += ` 🤝${pc}`;
             }
-            const opt = document.createElement('option'); opt.value = m.Name; opt.text = text;
+            const opt = document.createElement('option'); 
+            opt.value = m.Name; opt.text = text;
             selectEl.appendChild(opt);
         });
         selectEl.value = curVal;
@@ -459,6 +422,7 @@
     window.handleSel = (el) => {
         const box = el.closest('.card');
         applyColorManual(el, el.value);
+        // Refresh all selects in the card to update exclusion lists and partner counts
         box.querySelectorAll('.p-select').forEach(s => window.refreshSelectOptionsManual(s));
     };
 
