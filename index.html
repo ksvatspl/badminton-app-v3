@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Badminton Hub Pro (V4.9 - Partner & Exclusion)</title>
+    <title>Badminton Hub Pro (V4.9 - Partner Fix)</title>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -428,7 +428,25 @@
 
     window.createMatchElement = (num) => {
         const div = document.createElement('div'); div.className = 'card'; div.id = `match-box-${num}`;
-        div.innerHTML = `<div class="game-label">เกมที่ ${num}</div><div class="match-grid"><div><select class="p-select" data-role="p1a" onchange="handleSel(this)"></select><select class="p-select" data-role="p2a" onchange="handleSel(this)"></select></div><div class="vs-text">VS</div><div><select class="p-select" data-role="p1b" onchange="handleSel(this)"></select><select class="p-select" data-role="p2b" onchange="handleSel(this)"></select></div></div><div class="btn-group"><button class="btn-choice" onclick="setWin(this,'Team A')">A ชนะ</button><button class="btn-choice" onclick="setWin(this,'Team B')">B ชนะ</button></div><button class="btn-main" onclick="saveMatchBox(${num})">บันทึกผล</button><button class="btn-edit-link" onclick="editMatch(${num})">แก้ไขข้อมูล</button>`;
+        div.innerHTML = `
+            <div class="game-label">เกมที่ ${num}</div>
+            <div class="match-grid">
+                <div>
+                    <select class="p-select" data-role="p1a" onchange="handleSel(this)"></select>
+                    <select class="p-select" data-role="p2a" onchange="handleSel(this)"></select>
+                </div>
+                <div class="vs-text">VS</div>
+                <div>
+                    <select class="p-select" data-role="p1b" onchange="handleSel(this)"></select>
+                    <select class="p-select" data-role="p2b" onchange="handleSel(this)"></select>
+                </div>
+            </div>
+            <div class="btn-group">
+                <button class="btn-choice" onclick="setWin(this,'Team A')">A ชนะ</button>
+                <button class="btn-choice" onclick="setWin(this,'Team B')">B ชนะ</button>
+            </div>
+            <button class="btn-main" onclick="saveMatchBox(${num})">บันทึกผล</button>
+            <button class="btn-edit-link" onclick="editMatch(${num})">แก้ไขข้อมูล</button>`;
         return div;
     };
 
