@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Badminton Hub Pro (V5.2 - Final Fix)</title>
+    <title>Badminton Hub Pro (V5.3 - Manual Mode)</title>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -39,7 +39,7 @@
         .btn-main:disabled { background: #4f545c; opacity: 0.6; cursor: not-allowed; }
         .btn-live { background: var(--info); } 
         
-        .btn-add-manual { width: 100%; padding: 15px; background: transparent; border: 2px dashed var(--border); color: var(--text-dim); border-radius: 12px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .btn-add-manual { width: 100%; padding: 15px; background: var(--warning); color: #000; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; margin-top: 10px; margin-bottom: 20px; }
         .btn-status { border: none; border-radius: 6px; padding: 6px 4px; font-size: 0.7rem; font-weight: bold; cursor: pointer; width: 100%; }
         .btn-out { background: rgba(240, 71, 71, 0.15); color: var(--danger); border: 1px solid var(--danger); }
         .btn-in { background: rgba(67, 181, 129, 0.15); color: var(--accent); border: 1px solid var(--accent); }
@@ -58,7 +58,6 @@
         .m-table th { color: var(--text-dim); font-size: 0.7rem; padding: 10px 4px; border-bottom: 1px solid var(--border); text-align: center; }
         .m-table th.sortable:hover { color: white; cursor: pointer; }
         .m-table td { padding: 12px 4px; border-bottom: 1px solid #36393f; font-size: 0.9rem; text-align: center; }
-        .m-table th:first-child, .m-table td:first-child { text-align: left; padding-left: 10px; }
         
         .status-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; }
         .dot-active { background: var(--accent); } .dot-off { background: var(--danger); }
@@ -89,7 +88,7 @@
             <table class="m-table">
                 <thead>
                     <tr>
-                        <th class="sortable" onclick="setSort('name')">ชื่อ <span id="sort-name"></span></th>
+                        <th class="sortable" onclick="setSort('name')" style="text-align:left; padding-left:10px;">ชื่อ <span id="sort-name"></span></th>
                         <th class="sortable" onclick="setSort('class')">คลาส <span id="sort-class"></span></th>
                         <th class="sortable" onclick="setSort('played')">เกม <span id="sort-played">🔽</span></th>
                         <th class="sortable" onclick="setSort('win')">Win% <span id="sort-win"></span></th>
@@ -159,7 +158,7 @@
             <table class="m-table">
                 <thead>
                     <tr>
-                        <th class="sortable" onclick="setMiniSort('name')" style="text-align:left;">ชื่อ <span id="ms-name"></span></th>
+                        <th class="sortable" onclick="setMiniSort('name')" style="text-align:left; padding-left:10px;">ชื่อ <span id="ms-name"></span></th>
                         <th class="sortable" onclick="setMiniSort('class')">คลาส <span id="ms-class"></span></th>
                         <th class="sortable" onclick="setMiniSort('played')">เกม <span id="ms-played">🔽</span></th>
                         <th class="sortable" onclick="setMiniSort('win')">Win% <span id="ms-win"></span></th>
@@ -242,8 +241,7 @@
             btn.innerText = "✅ บันทึกผล";
             btn.classList.remove('btn-live');
             const editLnk = box.querySelector('.btn-edit-link');
-            editLnk.style.display = 'block';
-            editLnk.innerText = "✏️ แก้ไขรายชื่อ";
+            if(editLnk) { editLnk.style.display = 'block'; editLnk.innerText = "✏️ แก้ไขรายชื่อ"; }
             return;
         }
 
@@ -251,6 +249,7 @@
         
         btn.disabled = true; btn.innerText = "กำลังบันทึก...";
         const data = { p1a: players[0], p2a: players[1], p1b: players[2], p2b: players[3], winner, timestamp: serverTimestamp() };
+        
         try {
             if(box.dataset.docid) {
                 await updateDoc(doc(db, "matches", box.dataset.docid), data);
@@ -260,7 +259,11 @@
                 box.dataset.docid = docRef.id; 
             }
             box.classList.remove('state-live');
-        } catch(e) { btn.disabled = false; btn.innerText = "✅ บันทึกผล"; }
+        } catch(e) { 
+            console.error(e);
+            alert("บันทึกไม่สำเร็จ! กรุณาลองใหม่อีกครั้ง");
+            btn.disabled = false; btn.innerText = "✅ บันทึกผล"; 
+        }
     };
 
     window.quickStatusUpdate = async function(name, action) {
@@ -336,7 +339,7 @@
         [...activeM, ...inactiveM].forEach(m => {
             const isActive = m.Status === "Active";
             const wr = m.TotalPlayed > 0 ? Math.round((m.Win/m.TotalPlayed)*100) : 0;
-            html += `<tr><td><span class="status-dot ${isActive?'dot-active':'dot-off'}"></span><b>${m.Name}</b></td><td class="${getTxtClass(m.Class)}">${m.Class}</td><td><b>${m.TotalPlayed}</b></td><td>${wr}%</td><td><button class="btn-status ${isActive?'btn-out':'btn-in'}" onclick="quickStatusUpdate('${m.Name}','${isActive?'checkout':'undo'}')">${isActive?'ออก':'เข้า'}</button></td></tr>`;
+            html += `<tr><td style="text-align:left; padding-left:10px;"><span class="status-dot ${isActive?'dot-active':'dot-off'}"></span><b>${m.Name}</b></td><td class="${getTxtClass(m.Class)}">${m.Class}</td><td><b>${m.TotalPlayed}</b></td><td>${wr}%</td><td><button class="btn-status ${isActive?'btn-out':'btn-in'}" onclick="quickStatusUpdate('${m.Name}','${isActive?'checkout':'undo'}')">${isActive?'ออก':'เข้า'}</button></td></tr>`;
         });
         tbody.innerHTML = html;
     };
@@ -384,9 +387,6 @@
             if(!matches.find(m => m.id === box.dataset.docid)) box.remove();
         });
 
-        if(container.querySelectorAll('.card:not([data-docid])').length === 0) {
-            container.appendChild(createMatchElement());
-        }
         window.updateBoxNumbers();
     };
 
@@ -402,8 +402,6 @@
             }
             const editLink = box.querySelector('.btn-edit-link');
             if (editLink) editLink.onclick = () => editMatch(num);
-            
-            // Fix: Re-populate selects for draft boxes
             if(!box.dataset.docid || box.dataset.editing === "true") {
                 box.querySelectorAll('.p-select').forEach(s => window.refreshSelectOptionsManual(s));
             }
@@ -412,7 +410,8 @@
 
     window.addNewManualBox = () => {
         const container = document.getElementById('matchContainer');
-        container.appendChild(createMatchElement());
+        const box = createMatchElement();
+        container.appendChild(box);
         window.updateBoxNumbers();
     };
 
@@ -504,7 +503,7 @@
         let html = "";
         [...window.allDataMemory].sort(getSortFn(window.miniSort)).forEach(m => {
             const wr = m.TotalPlayed ? Math.round((m.Win/m.TotalPlayed)*100) : 0;
-            html += `<tr><td style="text-align:left;"><b>${m.Name}</b></td><td class="${getTxtClass(m.Class)}">${m.Class}</td><td><b>${m.TotalPlayed}</b></td><td>${wr}%</td></tr>`;
+            html += `<tr><td style="text-align:left; padding-left:10px;"><b>${m.Name}</b></td><td class="${getTxtClass(m.Class)}">${m.Class}</td><td><b>${m.TotalPlayed}</b></td><td>${wr}%</td></tr>`;
         });
         document.getElementById('miniStatsTableBody').innerHTML = html;
     };
