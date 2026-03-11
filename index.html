@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Badminton Hub Pro (V5.8 - Stable Draft)</title>
+    <title>Badminton Hub Pro (V5.9 - Fix Selection & Scroll)</title>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -57,6 +57,7 @@
         .btn-group { display: flex; gap: 10px; margin-bottom: 10px; }
         .btn-choice { flex: 1; padding: 10px; background: #36393f; border: 1px solid var(--border); color: var(--text-dim); border-radius: 8px; cursor: pointer; font-weight: bold; }
         .btn-choice.selected { background: rgba(67, 181, 129, 0.2); border-color: var(--accent); color: var(--accent); }
+        .btn-choice:disabled { opacity: 0.5; cursor: not-allowed; }
         
         .btn-saved-compact { background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--accent); padding: 8px; font-size: 0.85rem; border-radius: 8px; width: 100%; text-align: center; margin-top: 5px; font-weight: bold; }
         .btn-edit-link { background: transparent; border: none; color: var(--warning); font-size: 0.75rem; text-decoration: underline; margin-top: 8px; display: none; width: 100%; cursor: pointer; }
@@ -242,9 +243,7 @@
         if(status === 'live' && players.includes("")) return alert("เลือกผู้เล่นให้ครบ 4 คนก่อน!");
         if(status === 'saved' && (!winner || players.includes(""))) return alert("ระบุทีมชนะและผู้เล่นให้ครบ!");
 
-        // เมื่อบันทึกแล้ว ให้เอาสถานะ editing/draft ออก
         delete box.dataset.editing;
-        
         const data = { 
             matchNum: parseInt(matchNum), 
             p1a: players[0], p2a: players[1], p1b: players[2], p2b: players[3], 
@@ -270,9 +269,12 @@
 </script>
 
 <script>
-    // --- Stable Match Logic (Draft Protection) ---
+    // --- Stable Match Logic (Draft Protection & Anti-Jump) ---
     window.renderMatchHistoryStrict = () => {
         const container = document.getElementById('matchContainer');
+        // จำตำแหน่ง Scroll ก่อนวาดใหม่
+        const scrollPos = window.scrollY;
+        
         let highestNum = 0;
         
         // 1. ระบุ Card ที่เป็น Draft หรือกำลังแก้ไขอยู่ เพื่อเก็บไว้
@@ -290,7 +292,6 @@
             let mNum = m.matchNum;
             highestNum = Math.max(highestNum, mNum);
             
-            // ถ้ามี Draft เลขเดียวกันค้างอยู่ (กรณีพึ่งกดเซฟ) ให้เอา Draft ออกแล้วใช้ข้อมูลจริง
             let existingDraft = container.querySelector(`.card[data-matchnum="${mNum}"][data-status="draft"]`);
             if(existingDraft) existingDraft.remove();
 
@@ -300,8 +301,8 @@
             box.dataset.docid = m.id;
             const status = m.matchStatus || 'saved';
             box.dataset.status = status;
-            box.classList.toggle('is-saved', status === 'saved');
             box.classList.toggle('is-live', status === 'live');
+            box.classList.toggle('is-saved', status === 'saved');
             
             if(window.hideSavedMatches && status === 'saved') box.classList.add('hidden-match');
 
@@ -322,7 +323,8 @@
             btnGroup.querySelectorAll('.btn-choice').forEach(b => {
                 const isWinner = (m.winner === 'Team A' && b.innerText === 'A ชนะ') || (m.winner === 'Team B' && b.innerText === 'B ชนะ');
                 b.classList.toggle('selected', isWinner);
-                b.disabled = true;
+                // --- แก้ไข: ถ้าสถานะคือ live ต้องกดปุ่มชนะได้ ---
+                b.disabled = (status === 'saved'); 
             });
 
             const actionBtn = box.querySelector('.btn-main');
@@ -330,19 +332,24 @@
                 actionBtn.className = 'btn-main';
                 actionBtn.innerText = '💾 บันทึกผลการแข่ง';
                 actionBtn.onclick = () => saveMatchBox(mNum, 'saved');
+                actionBtn.style.display = 'block';
             } else {
                 actionBtn.style.display = 'none';
-                const sd = document.createElement('div'); sd.className = 'btn-saved-compact';
-                sd.innerText = '✓ บันทึกผลแล้ว'; box.insertBefore(sd, box.querySelector('.btn-edit-link'));
+                if(!box.querySelector('.btn-saved-compact')){
+                    const sd = document.createElement('div'); sd.className = 'btn-saved-compact';
+                    sd.innerText = '✓ บันทึกผลแล้ว'; box.insertBefore(sd, box.querySelector('.btn-edit-link'));
+                }
             }
             box.querySelector('.btn-edit-link').style.display = 'block';
         });
 
-        // 4. สรุปเลขเกมถัดไป และเรียงลำดับใหม่
         window.globalNextMatchNum = Math.max(highestNum + 1, window.globalNextMatchNum);
         const allCards = Array.from(container.querySelectorAll('.card'));
         allCards.sort((a, b) => parseInt(a.dataset.matchnum) - parseInt(b.dataset.matchnum));
         allCards.forEach(c => container.appendChild(c));
+
+        // คืนตำแหน่ง Scroll ทันทีหลัง Render เสร็จ
+        window.scrollTo(0, scrollPos);
     };
 
     window.addNewManualBox = () => {
@@ -354,6 +361,7 @@
         const box = createMatchElement(window.globalNextMatchNum);
         container.appendChild(box);
         box.querySelectorAll('.p-select').forEach(s => window.refreshSelectOptionsManual(s));
+        // กดเพิ่มเอง ให้เลื่อนลงมาดูใบใหม่
         window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
     };
 
