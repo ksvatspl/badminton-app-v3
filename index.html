@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Badminton Hub Pro (V6.0 - Smart Matchmaking)</title>
+    <title>Badminton Hub Pro (V6.1 - Smart Matchmaking & UI)</title>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -44,7 +44,12 @@
         
         .btn-main { width: 100%; padding: 14px; background: var(--accent); color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; }
         .btn-main:disabled { background: #4f545c; opacity: 0.6; cursor: not-allowed; }
-        .btn-suggest { background: var(--warning); color: #000; margin-bottom: 8px; }
+        
+        /* Action Row สำหรับปุ่มลงสนามและปุ่มสุ่ม */
+        .action-row { display: flex; gap: 8px; margin-bottom: 8px; }
+        .btn-suggest { flex: 0 0 55px; background: var(--warning); color: #000; border: none; border-radius: 10px; cursor: pointer; font-size: 1.6rem; display: flex; align-items: center; justify-content: center; transition: transform 0.1s; }
+        .btn-suggest:active { transform: scale(0.95); }
+        
         .btn-live-act { background: var(--live); }
         .btn-add-manual { width: 100%; padding: 15px; background: transparent; border: 2px dashed var(--border); color: var(--text-dim); border-radius: 12px; font-weight: bold; cursor: pointer; margin-top: 10px; }
 
@@ -322,17 +327,21 @@
                 b.disabled = (status === 'saved'); 
             });
 
+            const actionRow = box.querySelector('.action-row');
             const actionBtn = box.querySelector('.btn-main.btn-live-act');
             const suggestBtn = box.querySelector('.btn-suggest');
-            if(suggestBtn) suggestBtn.style.display = 'none'; // ซ่อนปุ่ม Suggest ถ้าไม่ได้เป็น Draft
+            
+            if(suggestBtn) suggestBtn.style.display = 'none';
 
             if(status === 'live') {
-                actionBtn.className = 'btn-main btn-live-act';
-                actionBtn.innerText = '💾 บันทึกผลการแข่ง';
-                actionBtn.onclick = () => saveMatchBox(mNum, 'saved');
-                actionBtn.style.display = 'block';
+                if(actionRow) actionRow.style.display = 'flex';
+                if(actionBtn) {
+                    actionBtn.className = 'btn-main btn-live-act';
+                    actionBtn.innerText = '💾 บันทึกผลการแข่ง';
+                    actionBtn.onclick = () => saveMatchBox(mNum, 'saved');
+                }
             } else {
-                actionBtn.style.display = 'none';
+                if(actionRow) actionRow.style.display = 'none';
                 if(!box.querySelector('.btn-saved-compact')){
                     const sd = document.createElement('div'); sd.className = 'btn-saved-compact';
                     sd.innerText = '✓ บันทึกผลแล้ว'; box.insertBefore(sd, box.querySelector('.btn-edit-link'));
@@ -371,8 +380,10 @@
                 <div><select class="p-select" data-role="p1b" onchange="handleSel(this)"></select><select class="p-select" data-role="p2b" onchange="handleSel(this)"></select></div>
             </div>
             <div class="btn-group"><button class="btn-choice" onclick="setWin(this,'Team A')">A ชนะ</button><button class="btn-choice" onclick="setWin(this,'Team B')">B ชนะ</button></div>
-            <button class="btn-main btn-suggest" onclick="autoSuggestPlayers(${num})">🤖 จัดคู่อัตโนมัติ</button>
-            <button class="btn-main btn-live-act" onclick="saveMatchBox(${num}, 'live')">▶ ลงสนาม (ล็อคชื่อ)</button>
+            <div class="action-row">
+                <button class="btn-suggest" onclick="autoSuggestPlayers(${num})" title="จัดคู่อัตโนมัติ">🤖</button>
+                <button class="btn-main btn-live-act" style="flex: 1; margin-bottom: 0;" onclick="saveMatchBox(${num}, 'live')">▶ ลงสนาม (ล็อคชื่อ)</button>
+            </div>
             <button class="btn-edit-link" onclick="editMatch(${num})">แก้ไขข้อมูล</button>`;
         return div;
     };
@@ -384,14 +395,19 @@
         const saved = box.querySelector('.btn-saved-compact');
         if(saved) saved.remove();
         
+        const actionRow = box.querySelector('.action-row');
+        if(actionRow) actionRow.style.display = 'flex';
+        
         const suggestBtn = box.querySelector('.btn-suggest');
-        if(suggestBtn) suggestBtn.style.display = 'block';
+        if(suggestBtn) suggestBtn.style.display = 'flex';
 
         const actionBtn = box.querySelector('.btn-main.btn-live-act');
-        actionBtn.style.display = 'block';
-        actionBtn.className = 'btn-main btn-live-act';
-        actionBtn.innerText = '💾 ยืนยันแก้ไข/ลงสนาม';
-        actionBtn.onclick = () => saveMatchBox(num, 'live');
+        if(actionBtn) {
+            actionBtn.style.display = 'block';
+            actionBtn.className = 'btn-main btn-live-act';
+            actionBtn.innerText = '💾 ยืนยันแก้ไข/ลงสนาม';
+            actionBtn.onclick = () => saveMatchBox(num, 'live');
+        }
         
         box.querySelectorAll('.p-select').forEach(s => window.refreshSelectOptionsManual(s));
     };
@@ -416,7 +432,7 @@
         const box = document.querySelector(`.card[data-matchnum="${num}"]`);
         if (!box) return;
 
-        // 1. หาว่าใครที่ติดพันอยู่ในการ์ดอื่น (Live, Draft หรือ Editing) ยกเว้นการ์ดใบนี้
+        // 1. หาว่าใครที่ติดพันอยู่ในการ์ดอื่น
         let excludedPlayers = [];
         const otherCards = document.querySelectorAll(`.card:not([data-matchnum="${num}"])`);
         otherCards.forEach(card => {
@@ -427,7 +443,7 @@
             }
         });
 
-        // 2. กรองเฉพาะคนที่ Active และไม่ได้ถูกล็อคอยู่ในการ์ดอื่น
+        // 2. กรองคนว่าง
         let available = window.allDataMemory.filter(m => m.Status === "Active" && !excludedPlayers.includes(m.Name));
 
         if (available.length < 4) {
@@ -435,13 +451,11 @@
             return;
         }
 
-        // 3. จัดเรียงตามจำนวนเกมที่เล่นน้อยที่สุด
+        // 3. เรียงตามคิว (เล่นน้อยสุดมาก่อน)
         available.sort((a, b) => a.TotalPlayed - b.TotalPlayed);
-        
-        // ดึง 4 คนแรกที่คิวว่างสุดมาจัดคู่
         const pool = available.slice(0, 4);
 
-        // 4. สร้างรูปแบบการจัดทีม 3 รูปแบบ เพื่อหาทีมที่บาลานซ์ที่สุด
+        // 4. สร้างรูปแบบการจัดทีม
         const combos = [
             [pool[0], pool[1], pool[2], pool[3]], // P1+P2 VS P3+P4
             [pool[0], pool[2], pool[1], pool[3]], // P1+P3 VS P2+P4
@@ -451,24 +465,32 @@
         let bestCombo = combos[0];
         let minPenalty = Infinity;
 
-        // คำนวณ Penalty ของแต่ละรูปแบบ (คะแนนยิ่งน้อยยิ่งดี)
+        // คำนวณ Penalty ของแต่ละรูปแบบ
         combos.forEach(c => {
             const p1a = c[0], p2a = c[1], p1b = c[2], p2b = c[3];
             
-            const classA = window.getClassValue(p1a.Class) + window.getClassValue(p2a.Class);
-            const classB = window.getClassValue(p1b.Class) + window.getClassValue(p2b.Class);
+            const classA1 = window.getClassValue(p1a.Class);
+            const classA2 = window.getClassValue(p2a.Class);
+            const classB1 = window.getClassValue(p1b.Class);
+            const classB2 = window.getClassValue(p2b.Class);
+
+            const classA = classA1 + classA2;
+            const classB = classB1 + classB2;
             
-            const diffPenalty = Math.abs(classA - classB) * 10; // คลาสต่างกัน ปรับ 10 แต้มต่อ 1.0 Class
-            
+            const diffPenalty = Math.abs(classA - classB) * 10;
             const partnerPenalty = (window.getPartnerCount(p1a.Name, p2a.Name) * 50) + 
-                                   (window.getPartnerCount(p1b.Name, p2b.Name) * 50); // เจอคู่เดิม ปรับโหดสุด (50 แต้ม)
-            
+                                   (window.getPartnerCount(p1b.Name, p2b.Name) * 50);
             const oppPenalty = (window.getOpponentCount(p1a.Name, p1b.Name) * 10) +
                                (window.getOpponentCount(p1a.Name, p2b.Name) * 10) +
                                (window.getOpponentCount(p2a.Name, p1b.Name) * 10) +
-                               (window.getOpponentCount(p2a.Name, p2b.Name) * 10); // เจอคู่แข่งเดิม ปรับ 10 แต้ม
+                               (window.getOpponentCount(p2a.Name, p2b.Name) * 10);
             
-            const totalPenalty = diffPenalty + partnerPenalty + oppPenalty;
+            // --- ใหม่: กฎ Class Gap (ทีมเดียวกันห้ามต่างกันเกิน 2) ---
+            let internalGapPenalty = 0;
+            if (Math.abs(classA1 - classA2) > 2) internalGapPenalty += 1000;
+            if (Math.abs(classB1 - classB2) > 2) internalGapPenalty += 1000;
+            
+            const totalPenalty = diffPenalty + partnerPenalty + oppPenalty + internalGapPenalty;
             
             if (totalPenalty < minPenalty) {
                 minPenalty = totalPenalty;
@@ -476,14 +498,13 @@
             }
         });
 
-        // 5. นำชื่อใส่ลงในช่อง Select
+        // 5. อัปเดตรายชื่อลง Select
         const selects = Array.from(box.querySelectorAll('.p-select'));
         selects[0].value = bestCombo[0].Name;
         selects[1].value = bestCombo[1].Name;
         selects[2].value = bestCombo[2].Name;
         selects[3].value = bestCombo[3].Name;
 
-        // อัปเดต UI ให้สีและตัวเลือกอัปเดตตาม
         selects.forEach(s => window.refreshSelectOptionsManual(s));
     };
 
