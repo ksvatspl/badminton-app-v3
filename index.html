@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Badminton Hub Pro (V6.1.1 - Smart Balance)</title>
+    <title>Badminton Hub Pro (V6.1.2 - Pro Balance AI)</title>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -45,7 +45,7 @@
         .btn-main { width: 100%; padding: 14px; background: var(--accent); color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; }
         .btn-main:disabled { background: #4f545c; opacity: 0.6; cursor: not-allowed; }
         
-        /* Action Row สำหรับปุ่มลงสนามและปุ่มสุ่ม (แบบ V6.1) */
+        /* Action Row แบบ V6.1 */
         .action-row { display: flex; gap: 8px; margin-bottom: 8px; }
         .btn-suggest { flex: 0 0 55px; background: var(--warning); color: #000; border: none; border-radius: 10px; cursor: pointer; font-size: 1.6rem; display: flex; align-items: center; justify-content: center; transition: transform 0.1s; }
         .btn-suggest:active { transform: scale(0.95); }
@@ -428,6 +428,7 @@
         return count;
     };
 
+    // สมองกล AI เวอร์ชันอัปเกรด (มองผู้เล่น 10 คนเพื่อหาคู่ที่ดีที่สุด)
     window.autoSuggestPlayers = (num) => {
         const box = document.querySelector(`.card[data-matchnum="${num}"]`);
         if (!box) return;
@@ -449,57 +450,81 @@
             return;
         }
 
+        // ดึงเรียงตามเกมที่เล่น เพื่อให้ความสำคัญกับคนเล่นน้อย
         available.sort((a, b) => a.TotalPlayed - b.TotalPlayed);
-        const pool = available.slice(0, 4);
+        
+        // กางรัศมีมองคนว่างล่วงหน้าสูงสุด 10 คน เพื่อเลี่ยงการเกิดทีมพัง
+        const poolSize = Math.min(available.length, 10);
+        const pool = available.slice(0, poolSize);
 
-        const combos = [
-            [pool[0], pool[1], pool[2], pool[3]], // P1+P2 VS P3+P4
-            [pool[0], pool[2], pool[1], pool[3]], // P1+P3 VS P2+P4
-            [pool[0], pool[3], pool[1], pool[2]]  // P1+P4 VS P2+P3
-        ];
-
-        let bestCombo = combos[0];
+        let bestMatch = null;
         let minPenalty = Infinity;
 
-        combos.forEach(c => {
-            const p1a = c[0], p2a = c[1], p1b = c[2], p2b = c[3];
-            
-            const classA1 = window.getClassValue(p1a.Class);
-            const classA2 = window.getClassValue(p2a.Class);
-            const classB1 = window.getClassValue(p1b.Class);
-            const classB2 = window.getClassValue(p2b.Class);
+        // วนลูปจับคู่รูปแบบที่เป็นไปได้ทั้งหมดจากผู้เล่นใน Pool
+        for(let i=0; i<pool.length-3; i++) {
+            for(let j=i+1; j<pool.length-2; j++) {
+                for(let k=j+1; k<pool.length-1; k++) {
+                    for(let l=k+1; l<pool.length; l++) {
+                        let p = [pool[i], pool[j], pool[k], pool[l]];
+                        
+                        const setups = [
+                            [p[0], p[1], p[2], p[3]], // P1,P2 vs P3,P4
+                            [p[0], p[2], p[1], p[3]], // P1,P3 vs P2,P4
+                            [p[0], p[3], p[1], p[2]]  // P1,P4 vs P2,P3
+                        ];
 
-            const classA = classA1 + classA2;
-            const classB = classB1 + classB2;
-            
-            // 1. เน้น Balance ระหว่างทีม A และทีม B ให้สูงมากๆ (คูณ 1000)
-            const diffPenalty = Math.abs(classA - classB) * 1000; 
+                        setups.forEach(c => {
+                            const p1a = c[0], p2a = c[1], p1b = c[2], p2b = c[3];
+                            
+                            const v1a = window.getClassValue(p1a.Class);
+                            const v2a = window.getClassValue(p2a.Class);
+                            const v1b = window.getClassValue(p1b.Class);
+                            const v2b = window.getClassValue(p2b.Class);
 
-            const partnerPenalty = (window.getPartnerCount(p1a.Name, p2a.Name) * 50) + 
-                                   (window.getPartnerCount(p1b.Name, p2b.Name) * 50);
-            const oppPenalty = (window.getOpponentCount(p1a.Name, p1b.Name) * 10) +
-                               (window.getOpponentCount(p1a.Name, p2b.Name) * 10) +
-                               (window.getOpponentCount(p2a.Name, p1b.Name) * 10) +
-                               (window.getOpponentCount(p2a.Name, p2b.Name) * 10);
-            
-            // 2. กฎ Class Gap ภายในทีม (ทั้ง A และ B ต้องห่างกันไม่เกิน 2) - โทษหนักมาก (5000)
-            let internalGapPenalty = 0;
-            if (Math.abs(classA1 - classA2) > 2) internalGapPenalty += 5000;
-            if (Math.abs(classB1 - classB2) > 2) internalGapPenalty += 5000;
-            
-            const totalPenalty = diffPenalty + partnerPenalty + oppPenalty + internalGapPenalty;
-            
-            if (totalPenalty < minPenalty) {
-                minPenalty = totalPenalty;
-                bestCombo = c;
+                            const classA = v1a + v2a;
+                            const classB = v1b + v2b;
+
+                            let penalty = 0;
+
+                            // 1. คิวการเล่น: ยิ่งเลือกรวมคนที่เล่นไปแล้วเยอะ ยิ่งโดนโทษหนัก 
+                            const totalGames = p1a.TotalPlayed + p2a.TotalPlayed + p1b.TotalPlayed + p2b.TotalPlayed;
+                            penalty += (totalGames * 10000000); 
+                            penalty += ((i + j + k + l) * 50000);
+
+                            // 2. กฎความห่างในทีม (Internal Gap): ห้ามห่างเกิน 2 เด็ดขาด (หนักสุด)
+                            const gapA = Math.abs(v1a - v2a);
+                            const gapB = Math.abs(v1b - v2b);
+                            if (gapA > 2) penalty += 100000000; // 100 ล้านคะแนน (บีบให้ AI ทิ้ง)
+                            if (gapB > 2) penalty += 100000000;
+
+                            // 3. กฎความบาลานซ์ของทีม (Team Balance): คะแนนทีม A กับ B ต้องสูสี
+                            const diff = Math.abs(classA - classB);
+                            penalty += (diff * 10000000); // 10 ล้านคะแนนต่อความห่าง 1 ระดับ
+
+                            // 4. ประวัติการเล่น
+                            const partnerPenalty = (window.getPartnerCount(p1a.Name, p2a.Name) * 5000) + 
+                                                   (window.getPartnerCount(p1b.Name, p2b.Name) * 5000);
+                            const oppPenalty = (window.getOpponentCount(p1a.Name, p1b.Name) * 1000) +
+                                               (window.getOpponentCount(p1a.Name, p2b.Name) * 1000) +
+                                               (window.getOpponentCount(p2a.Name, p1b.Name) * 1000) +
+                                               (window.getOpponentCount(p2a.Name, p2b.Name) * 1000);
+                            penalty += partnerPenalty + oppPenalty;
+
+                            if (penalty < minPenalty) {
+                                minPenalty = penalty;
+                                bestMatch = c;
+                            }
+                        });
+                    }
+                }
             }
-        });
+        }
 
         const selects = Array.from(box.querySelectorAll('.p-select'));
-        selects[0].value = bestCombo[0].Name;
-        selects[1].value = bestCombo[1].Name;
-        selects[2].value = bestCombo[2].Name;
-        selects[3].value = bestCombo[3].Name;
+        selects[0].value = bestMatch[0].Name;
+        selects[1].value = bestMatch[1].Name;
+        selects[2].value = bestMatch[2].Name;
+        selects[3].value = bestMatch[3].Name;
 
         selects.forEach(s => window.refreshSelectOptionsManual(s));
     };
