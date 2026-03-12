@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Badminton Hub Pro (V6.1 - Smart Matchmaking & UI)</title>
+    <title>Badminton Hub Pro (V6.1.1 - Smart Balance)</title>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -45,7 +45,7 @@
         .btn-main { width: 100%; padding: 14px; background: var(--accent); color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; }
         .btn-main:disabled { background: #4f545c; opacity: 0.6; cursor: not-allowed; }
         
-        /* Action Row สำหรับปุ่มลงสนามและปุ่มสุ่ม */
+        /* Action Row สำหรับปุ่มลงสนามและปุ่มสุ่ม (แบบ V6.1) */
         .action-row { display: flex; gap: 8px; margin-bottom: 8px; }
         .btn-suggest { flex: 0 0 55px; background: var(--warning); color: #000; border: none; border-radius: 10px; cursor: pointer; font-size: 1.6rem; display: flex; align-items: center; justify-content: center; transition: transform 0.1s; }
         .btn-suggest:active { transform: scale(0.95); }
@@ -432,7 +432,6 @@
         const box = document.querySelector(`.card[data-matchnum="${num}"]`);
         if (!box) return;
 
-        // 1. หาว่าใครที่ติดพันอยู่ในการ์ดอื่น
         let excludedPlayers = [];
         const otherCards = document.querySelectorAll(`.card:not([data-matchnum="${num}"])`);
         otherCards.forEach(card => {
@@ -443,7 +442,6 @@
             }
         });
 
-        // 2. กรองคนว่าง
         let available = window.allDataMemory.filter(m => m.Status === "Active" && !excludedPlayers.includes(m.Name));
 
         if (available.length < 4) {
@@ -451,11 +449,9 @@
             return;
         }
 
-        // 3. เรียงตามคิว (เล่นน้อยสุดมาก่อน)
         available.sort((a, b) => a.TotalPlayed - b.TotalPlayed);
         const pool = available.slice(0, 4);
 
-        // 4. สร้างรูปแบบการจัดทีม
         const combos = [
             [pool[0], pool[1], pool[2], pool[3]], // P1+P2 VS P3+P4
             [pool[0], pool[2], pool[1], pool[3]], // P1+P3 VS P2+P4
@@ -465,7 +461,6 @@
         let bestCombo = combos[0];
         let minPenalty = Infinity;
 
-        // คำนวณ Penalty ของแต่ละรูปแบบ
         combos.forEach(c => {
             const p1a = c[0], p2a = c[1], p1b = c[2], p2b = c[3];
             
@@ -477,7 +472,9 @@
             const classA = classA1 + classA2;
             const classB = classB1 + classB2;
             
-            const diffPenalty = Math.abs(classA - classB) * 10;
+            // 1. เน้น Balance ระหว่างทีม A และทีม B ให้สูงมากๆ (คูณ 1000)
+            const diffPenalty = Math.abs(classA - classB) * 1000; 
+
             const partnerPenalty = (window.getPartnerCount(p1a.Name, p2a.Name) * 50) + 
                                    (window.getPartnerCount(p1b.Name, p2b.Name) * 50);
             const oppPenalty = (window.getOpponentCount(p1a.Name, p1b.Name) * 10) +
@@ -485,10 +482,10 @@
                                (window.getOpponentCount(p2a.Name, p1b.Name) * 10) +
                                (window.getOpponentCount(p2a.Name, p2b.Name) * 10);
             
-            // --- ใหม่: กฎ Class Gap (ทีมเดียวกันห้ามต่างกันเกิน 2) ---
+            // 2. กฎ Class Gap ภายในทีม (ทั้ง A และ B ต้องห่างกันไม่เกิน 2) - โทษหนักมาก (5000)
             let internalGapPenalty = 0;
-            if (Math.abs(classA1 - classA2) > 2) internalGapPenalty += 1000;
-            if (Math.abs(classB1 - classB2) > 2) internalGapPenalty += 1000;
+            if (Math.abs(classA1 - classA2) > 2) internalGapPenalty += 5000;
+            if (Math.abs(classB1 - classB2) > 2) internalGapPenalty += 5000;
             
             const totalPenalty = diffPenalty + partnerPenalty + oppPenalty + internalGapPenalty;
             
@@ -498,7 +495,6 @@
             }
         });
 
-        // 5. อัปเดตรายชื่อลง Select
         const selects = Array.from(box.querySelectorAll('.p-select'));
         selects[0].value = bestCombo[0].Name;
         selects[1].value = bestCombo[1].Name;
