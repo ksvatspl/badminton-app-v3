@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Badminton Hub Pro (V6.1.3 - Class Sorting)</title>
+    <title>Badminton Hub Pro (V6.1.4 - Partner & Class Fixed)</title>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -46,8 +46,7 @@
         .btn-main:disabled { background: #4f545c; opacity: 0.6; cursor: not-allowed; }
         
         .action-row { display: flex; gap: 8px; margin-bottom: 8px; }
-        .btn-suggest { flex: 0 0 55px; background: var(--warning); color: #000; border: none; border-radius: 10px; cursor: pointer; font-size: 1.6rem; display: flex; align-items: center; justify-content: center; transition: transform 0.1s; }
-        .btn-suggest:active { transform: scale(0.95); }
+        .btn-suggest { flex: 0 0 55px; background: var(--warning); color: #000; border: none; border-radius: 10px; cursor: pointer; font-size: 1.6rem; display: flex; align-items: center; justify-content: center; }
         
         .btn-live-act { background: var(--live); }
         .btn-add-manual { width: 100%; padding: 15px; background: transparent; border: 2px dashed var(--border); color: var(--text-dim); border-radius: 12px; font-weight: bold; cursor: pointer; margin-top: 10px; }
@@ -264,6 +263,7 @@
 </script>
 
 <script>
+    // Priority Value for Class Sorting (High to Low)
     window.getClassValue = (cls) => {
         if (!cls) return 0;
         const valMap = { 'P': 9, 'S+': 8, 'S': 7, 'N+': 6, 'N': 5, 'BG+': 4, 'BG': 3, 'BB+': 2, 'BB': 1 };
@@ -386,21 +386,33 @@
     };
 
     window.refreshSelectOptionsManual = (selectEl) => {
-        const curVal = selectEl.value, box = selectEl.closest('.card');
+        const curVal = selectEl.value, box = selectEl.closest('.card'), role = selectEl.dataset.role;
         const allSelected = Array.from(box.querySelectorAll('.p-select')).map(s => s.value).filter(v => v !== "" && v !== curVal);
+        
+        let partnerVal = "";
+        if(role==='p1a') partnerVal = box.querySelector('[data-role="p2a"]').value;
+        if(role==='p2a') partnerVal = box.querySelector('[data-role="p1a"]').value;
+        if(role==='p1b') partnerVal = box.querySelector('[data-role="p2b"]').value;
+        if(role==='p2b') partnerVal = box.querySelector('[data-role="p1b"]').value;
+
         selectEl.innerHTML = '<option value="">- เลือก -</option>';
-        // เรียง Dropdown ตาม Class ความเก่ง
         window.allDataMemory.filter(m => m.Status === "Active")
         .sort((a, b) => window.getClassValue(b.Class) - window.getClassValue(a.Class))
         .forEach(m => {
             if(allSelected.includes(m.Name)) return;
-            selectEl.appendChild(new Option(`${window.getDotEmoji(m.Class)} ${m.Name} [${m.Class}]`, m.Name));
+            let text = `${window.getDotEmoji(m.Class)} ${m.Name} [${m.Class}]`;
+            if(partnerVal && m.Name !== partnerVal) {
+                const pc = window.getPartnerCount(m.Name, partnerVal);
+                if(pc > 0) text += ` 🤝${pc > 1 ? '×'+pc : ''}`;
+            }
+            selectEl.appendChild(new Option(text, m.Name));
         });
         selectEl.value = curVal; applyColorManual(selectEl, curVal);
     };
 
     window.getDotEmoji = (cls) => { if(!cls) return "⚪"; const c=cls.toUpperCase(); if(c.includes('P')) return "🟣"; if(c.includes('S')) return "🔴"; if(c.includes('N')) return "🟠"; if(c.includes('BG')) return "🔵"; return "🟢"; };
     window.getTxtClass = (cls) => { if(!cls) return ""; const c=cls.toUpperCase(); if(c.includes('P')) return "txt-p"; if(c.includes('S')) return "txt-s"; if(c.includes('N')) return "txt-n"; if(c.includes('BG')) return "txt-bg"; return "txt-bb"; };
+    window.getPartnerCount = (p1, p2) => { let count = 0; window.fireMatches.forEach(m => { if((m.p1a===p1 && m.p2a===p2) || (m.p1a===p2 && m.p2a===p1)) count++; if((m.p1b===p1 && m.p2b===p2) || (m.p1b===p2 && m.p2b===p1)) count++; }); return count; };
     window.applyColorManual = (el, name) => { const m = window.allDataMemory.find(i => i.Name === name); el.style.borderLeftColor = m ? getComputedStyle(document.documentElement).getPropertyValue('--cls-'+getTxtClass(m.Class).split('-')[1]) : 'transparent'; };
     window.handleSel = (el) => { el.closest('.card').querySelectorAll('.p-select').forEach(s => window.refreshSelectOptionsManual(s)); };
     window.setWin = (btn, team) => { btn.parentElement.querySelectorAll('.btn-choice').forEach(b => b.classList.remove('selected')); btn.classList.add('selected'); btn.parentElement.dataset.winner = team; };
